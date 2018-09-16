@@ -1,0 +1,38 @@
+import unittest
+
+from fastqTomat0.lib.barcode_indexer import ReadFromSeed
+
+INDEX_SEED = "ACCCTGTTC"
+INDEX_READS = ["GTATTTGGTATCACCCTGTTCGTTTGCAAGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGA",
+               "GTAACCCTGTTCTTATCAAAAAGGATCTTCACCTAGATCCTTTTAAATTAAAAATGAAGTTTTAAATC",
+               "GGGCTACCCTGTTCTATCAGGGTTATTGTCTCATGAGCGGATACATATTTGAATGTATTTAGAAAAATA",
+               "AAGTGCTCATCAACCCTGTTCGTATCACGAGGCCCTTTCGTCTCGCGCGTTTCGGTGATGACGGTGAAAACCTCTG",
+               "TAAAAATAGGCGTATCACGAGGCCCTTTCGTACCCTGTTCAGATGGTCAGACTAAACTGGCTGACGGAATTTATGCCTCTTCCGACCATCAAGC",
+               "TAGAACGCGGACCCTGTTCGTTGCATTCGATTCCTGTTTGTAATTGTCCTTTTAACAGCGATCGCGTATTTCGTC",
+               "AGCAGACCCTGTTCATAAAAGGTTAGGATTTGCCACTGAGGTTCTTCTTTCATATACTTCCTTTTAAAATCTTG",
+               "ACCCTGTTCCCTCCTTGACAGTCTTGACGTGCGCAGCTCAGGGGCATGATGTGACTGTCGCCCGTACATT",
+               "ATTAAATTCCAACCCTGTTCgccaaccttagtcactactttaggttatggtttgatgtgttttgctagat",
+               "CGTACGCTGCAGGTCGACGGATCCCCGGACCCTGTTCCGGGTAAGCTGCCACAGCAATTAATGCACAACATTTAACCTACATTCTTCCTTATCGGATCCTC"]
+INDEX_10bp_BC = ["GTTTGCAAGC",
+                 "TTATCAAAAA",
+                 "TATCAGGGTT",
+                 "GTATCACGAG",
+                 "AGATGGTCAG",
+                 "GTTGCATTCG",
+                 "ATAAAAGGTT",
+                 "CCTCCTTGAC",
+                 "gccaacctta",
+                 "CGGGTAAGCT"]
+
+
+class TestBarcodeFinder(unittest.TestCase):
+    def test_index(self):
+        reader = ReadFromSeed(seed=INDEX_SEED, bc_length=10)
+
+        for query, bc_expect in zip(INDEX_READS, INDEX_10bp_BC):
+            bc_actual = reader.scan_sequence(query, [30] * len(query))
+            assert bc_actual.upper() == bc_expect.upper()
+
+
+if __name__ == '__main__':
+    unittest.main()
