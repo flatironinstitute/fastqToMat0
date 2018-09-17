@@ -114,21 +114,15 @@ def merge_bcs(bc_dict1, bc_dict2):
 
 
 def map_merge_mismatches(sequence_dict, allowed_sequences, max_mismatch=1):
-    merge = dict()
-
     for seq in list(sequence_dict.keys()):
         if seq in allowed_sequences:
-            merge[seq] = seq
+            pass
         else:
             closest = search_list_degenerate(seq, allowed_sequences, max_mismatch=max_mismatch)
             if closest is not None:
-                merge[seq] = closest
+                sequence_dict[closest] = sequence_dict[closest].union(sequence_dict.pop(seq))
             else:
-                merge[seq] = seq
-
-    for k in list(sequence_dict.keys()):
-        if k != sequence_dict[k]:
-            sequence_dict[merge[k]] = sequence_dict[merge[k]].union(sequence_dict.pop(k))
+                pass
 
     return sequence_dict
 
