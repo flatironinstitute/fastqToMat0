@@ -69,15 +69,13 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, bc_fastq_3, out_file_path, is_zipped=F
 
 
 def output_bcs(out_file_path, bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1):
-    if bc2_map is not None:
-        allowed_bc2 = list(bc2_map.keys())
 
     with open(out_file_path, mode="w") as outfh:
         for idx, idx_dict in bc_dict.items():
             if allowed_indexes is not None:
                 # See if the index is in the keep list, or if it's within max_mismatch of the keep list
                 try:
-                    idx = map_index(idx, allowed_indexes, max_mismatch=max_index_mismatch)
+                    idx = reindex_for_mismatches(idx, allowed_indexes, max_mismatch=max_index_mismatch)
                 except IndexError:
                     continue
             else:
@@ -88,7 +86,7 @@ def output_bcs(out_file_path, bc_dict, allowed_indexes=None, bc2_map=None, max_i
 
                 # Merge together the UMI counts from barcodes that have an acceptable number of mismatches
                 if bc2_map is not None and max_bc_mismatch > 0:
-                    bc2_dict = map_merge_mismatches(bc2_dict, allowed_bc2, max_mismatch=max_bc_mismatch)
+                    bc2_dict = merge_mismatches(bc2_dict, list(bc2_map.keys()), max_mismatch=max_bc_mismatch)
 
                 # Print the Index, Barcode 1, Barcode 2, and UMI counts as a TSV
                 for bc2, umi_set in bc2_dict.items():
@@ -113,21 +111,25 @@ def merge_bcs(bc_dict1, bc_dict2):
     return bc_dict1
 
 
-def map_merge_mismatches(sequence_dict, allowed_sequences, max_mismatch=1):
+def merge_mismatches(sequence_dict, allowed_sequences, max_mismatch=1):
     for seq in list(sequence_dict.keys()):
         if seq in allowed_sequences:
             pass
         else:
             closest = search_list_degenerate(seq, allowed_sequences, max_mismatch=max_mismatch)
             if closest is not None:
-                sequence_dict[closest] = sequence_dict[closest].union(sequence_dict.pop(seq))
+                merge = sequence_dict.pop(seq)
+                try:
+                    sequence_dict[closest] = sequence_dict[closest].union(merge)
+                except KeyError:
+                    sequence_dict[closest] = merge
             else:
                 pass
 
     return sequence_dict
 
 
-def map_index(idx, allowed_idx, max_mismatch=1):
+def reindex_for_mismatches(idx, allowed_idx, max_mismatch=1):
     if idx in allowed_idx:
         return idx
     for kidx in allowed_idx:
