@@ -74,9 +74,7 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, bc_fastq_3, out_file_path=None, is_zip
 
 def output_bcs(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1):
 
-    # Create an empty DataFrame
     columns = ["Index","Cell_Barcode","Genotype","UMI_Count"]
-
 
     bc_df = []
     for idx, idx_dict in bc_dict.items():
@@ -104,8 +102,9 @@ def output_bcs(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1
                     except KeyError:
                         pass
 
-                bc_df.append(dict(Index=idx, Cell_Barcode=bc2, Genotype=bc2, UMI_Count=len(umi_set)))
+                bc_df.append(dict(Index=idx, Cell_Barcode=bc1, Genotype=bc2, UMI_Count=len(umi_set)))
 
+    # Convert a list of dicts to a dataframe
     bc_df = pd.DataFrame(bc_df, columns=columns)
     return bc_df
 
