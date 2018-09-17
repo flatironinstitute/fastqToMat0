@@ -76,9 +76,9 @@ def output_bcs(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1
 
     # Create an empty DataFrame
     columns = ["Index","Cell_Barcode","Genotype","UMI_Count"]
-    bc_df = pd.DataFrame(np.zeros((0,4), dtype=np.dtype(object)), columns=columns)
-    bc_df['UMI_Count'] = bc_df['UMI_Count'].astype(np.dtype(int))
 
+
+    bc_df = []
     for idx, idx_dict in bc_dict.items():
         if allowed_indexes is not None:
             # See if the index is in the keep list, or if it's within max_mismatch of the keep list
@@ -104,8 +104,9 @@ def output_bcs(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1
                     except KeyError:
                         pass
 
-                bc_df.append(dict(Index=idx, Cell_Barcode=bc2, Genotype=bc2, UMI_Count=len(umi_set)), ignore_index=True)
+                bc_df.append(dict(Index=idx, Cell_Barcode=bc2, Genotype=bc2, UMI_Count=len(umi_set)))
 
+    bc_df = pd.DataFrame(bc_df, columns=columns)
     return bc_df
 
 def merge_bcs(bc_dict1, bc_dict2):
