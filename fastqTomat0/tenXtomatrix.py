@@ -15,13 +15,14 @@ def main():
     tenX_to_matrix(args.path, bc_file=args.bc, bc_file_lib_index=args.bc_idx, outfile_path=args.out)
 
 
-def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path=None):
+def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path=None, remove_doublets=True):
 
     if bc_file is not None:
         bc = pd.read_table(bc_file, sep="\t")
         bc = bc.loc[bc[IDX] == bc_file_lib_index]
         bc.index = bc[BARCODE]
-        bc.drop(columns=BARCODE)
+        if remove_doublets:
+            bc.drop_duplicates(subset=BARCODE, keep=False)
         df = tenX.tenXProcessor(file_path=tenX_path, allowed_barcodes=bc.index.tolist()).process_files()
         df = filter_barcodes(df, bc)
     else:
@@ -35,7 +36,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
 
 def filter_barcodes(tenX_df, barcode_df):
     tenX_df = tenX_df.loc[barcode_df.index.intersection(tenX_df.index)]
-    tenX_df = tenX_df.merge(barcode_df[[GENOTYPE]])
+    tenX_df = tenX_df.merge(barcode_df[[GENOTYPE]], left_index=True, right_index=True)
     return tenX_df
 
 
