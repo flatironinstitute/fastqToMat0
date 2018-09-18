@@ -67,10 +67,10 @@ class tenXProcessor:
                     dims = (larr[0], larr[1])
                 else:
                     try:
-                        data[self.barcode_list[larr[1]]][larr[0]] = larr[2] - 1  # File is 1-indexed
+                        data[self.barcode_list[larr[1]]][larr[0] - 1] = larr[2]  # File is 1-indexed
                     except KeyError:
                         data[self.barcode_list[larr[1]]] = np.zeros((dims[0]), np.dtype('uint16'))
-                        data[self.barcode_list[larr[1]]][larr[0]] = larr[2] - 1  # File is 1-indexed
+                        data[self.barcode_list[larr[1]]][larr[0] - 1] = larr[2]  # File is 1-indexed
                     except IndexError:
                         pass
 
