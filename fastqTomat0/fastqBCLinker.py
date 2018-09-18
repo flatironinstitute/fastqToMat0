@@ -1,14 +1,12 @@
 from __future__ import print_function
 
 from fastqTomat0.lib.fasta import fasta_to_dict
-from fastqTomat0.lib.degenerate_tools import sequence_mismatch_degenerate, search_list_degenerate
-from fastqTomat0.lib.barcode_indexer import Link10xBCCounts, nest_dict
+from fastqTomat0.lib.barcode_indexer import Link10xBCCounts, create_10x_genotype_df
 
 import argparse
 import multiprocessing
 
 import pandas as pd
-import numpy as np
 
 # These are the minimum quality scores required to consider a sequence as a valid barcode
 BC_MIN_QUAL = 25
@@ -22,6 +20,9 @@ BC2_LENGTH = 19
 BC2_SEED = 'ttttctaaggatcca'
 
 UNKNOWN_STR = "UNK"
+
+# Pandas column names
+IDX, BARCODE, GENOTYPE, UMI_COUNT = 'Library_Index', 'Cell_Barcode', 'Genotype', 'Umi_Count'
 
 
 def main():
@@ -61,90 +62,14 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, bc_fastq_3, out_file_path=None, is_zip
         bc2_map = None
 
     linker = Link10xBCCounts(bc1_pattern, bc2_len, bc2_seed, is_zipped=is_zipped)
-    mp_pool = multiprocessing.Pool(processes=len(bc_fastq_1), maxtasksperchild=100)
+    bcs = linker.parse_fastq_mp(bc_fastq_1, bc_fastq_2, bc_fastq_3)
+    bc_df = create_10x_genotype_df(bcs, allowed_indexes=allowed_indexes, max_index_mismatch=max_index_mismatch,
+                                   bc2_map=bc2_map, include_unknowns=False)
+    bc_df.drop_duplicates(subset=BARCODE, keep=False)
 
-    bcs = dict()
-    for bc_dict in mp_pool.imap_unordered(linker.parse_fastq_mp, zip(bc_fastq_1, bc_fastq_2, bc_fastq_3)):
-        bcs = merge_bcs(bcs, bc_dict)
-
-    bc_df = output_bcs(bcs, allowed_indexes=allowed_indexes, max_index_mismatch=max_index_mismatch, bc2_map=bc2_map)
     if out_file_path is not None:
         bc_df.to_csv(out_file_path, sep="\t")
     return bc_df
-
-def output_bcs(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1):
-
-    columns = ["Index","Cell_Barcode","Genotype","UMI_Count"]
-
-    bc_df = []
-    for idx, idx_dict in bc_dict.items():
-        if allowed_indexes is not None:
-            # See if the index is in the keep list, or if it's within max_mismatch of the keep list
-            try:
-                idx = reindex_for_mismatches(idx, allowed_indexes, max_mismatch=max_index_mismatch)
-            except IndexError:
-                continue
-        else:
-            pass
-
-        # If the index is OK, print all of the BC1, BC2, UMI counts for that index
-        for bc1, bc2_dict in idx_dict.items():
-
-            # Merge together the UMI counts from barcodes that have an acceptable number of mismatches
-            if bc2_map is not None and max_bc_mismatch > 0:
-                bc2_dict = merge_mismatches(bc2_dict, list(bc2_map.keys()), max_mismatch=max_bc_mismatch)
-
-            # Print the Index, Barcode 1, Barcode 2, and UMI counts
-            for bc2, umi_set in bc2_dict.items():
-                if bc2_map is not None:
-                    try:
-                        bc2 = bc2_map[bc2]
-                    except KeyError:
-                        pass
-
-                bc_df.append(dict(Index=idx, Cell_Barcode=bc1, Genotype=bc2, UMI_Count=len(umi_set)))
-
-    # Convert a list of dicts to a dataframe
-    bc_df = pd.DataFrame(bc_df, columns=columns)
-    return bc_df
-
-def merge_bcs(bc_dict1, bc_dict2):
-    for idx, level_1_dict in bc_dict2.items():
-        for bc1, level_2_dict in level_1_dict.items():
-            for bc2, umi_set in level_2_dict.items():
-                try:
-                    bc_dict1[idx][bc1][bc2].union(umi_set)
-                except KeyError:
-                    nest_dict(bc_dict1, idx, bc1, bc2)
-                    bc_dict1[idx][bc1][bc2] = umi_set
-    return bc_dict1
-
-
-def merge_mismatches(sequence_dict, allowed_sequences, max_mismatch=1):
-    for seq in list(sequence_dict.keys()):
-        if seq in allowed_sequences:
-            pass
-        else:
-            closest = search_list_degenerate(seq, allowed_sequences, max_mismatch=max_mismatch)
-            if closest is not None:
-                merge = sequence_dict.pop(seq)
-                try:
-                    sequence_dict[closest] = sequence_dict[closest].union(merge)
-                except KeyError:
-                    sequence_dict[closest] = merge
-            else:
-                pass
-
-    return sequence_dict
-
-
-def reindex_for_mismatches(idx, allowed_idx, max_mismatch=1):
-    if idx in allowed_idx:
-        return idx
-    for kidx in allowed_idx:
-        if sequence_mismatch_degenerate(idx, kidx) <= max_mismatch:
-            return kidx
-    raise IndexError
 
 
 if __name__ == '__main__':

@@ -6,8 +6,10 @@ def convert_qual_illumina(qstr):
         qual.append(ord(ch) - 33)
     return qual
 
+
 # Dict to map strings to quality score functions
 PHRED_SCORE = {"illumina": convert_qual_illumina}
+
 
 # Wrapper for fastqProcessor that takes a single file handle
 # Returns a tuple of (control, sequence, quality) instead of a list of tuples
@@ -15,10 +17,10 @@ def fastq_gen(fh, phred_type='illumina'):
     for rec in fastqProcessor(phred_type=phred_type).fastq_gen(fh):
         yield rec[0]
 
+
 # The fastqProcessor class takes an arbitrary number of linked reads and yields a list of tuples for each sequence
 # The list is in the same order as the files that were given as arguments to fastq_gen
 class fastqProcessor:
-
     phred = None
     verify_ids = True
 
@@ -56,11 +58,9 @@ class fastqProcessor:
                     # If verify_ids was set, assert that the sequence IDs all match
                     if self.verify and cid is not None:
                         try:
-                            assert self.extract_control_id(c) == cid
+                            assert c.startswith(cid)
                         except AssertionError:
-                            print("ID mismatch (Record {i}): {cid} != {oid}".format(i=i,
-                                                                                    cid=cid,
-                                                                                    oid=self.extract_control_id(c)))
+                            print("ID mismatch (Record {i}): {cid} != {oid}".format(i=i, cid=cid, oid=c))
                             raise
                     cid = self.extract_control_id(c)
 
@@ -78,21 +78,17 @@ class fastqProcessor:
         line_id = -1
         for line in fh:
             line = line.strip()
-            try:
-                if line[0] == "+":
-                    continue
-                elif line[0] == "@":
-                    line_id = 0
-                    cont = line
-                elif line_id == 0:
-                    line_id = 1
-                    seq = line
-                elif line_id == 1:
-                    line_id = 2
-                    qual = phred(line)
-                    return cont, seq, qual
-            except IndexError:
+            if line.startswith("+"):
                 continue
+            elif line.startswith("@"):
+                line_id = 0
+                cont = line
+            elif line_id == 0:
+                line_id = 1
+                seq = line
+            elif line_id == 1:
+                qual = phred(line)
+                return cont, seq, qual
         raise StopIteration
 
     @staticmethod

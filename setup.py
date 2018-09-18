@@ -7,4 +7,5 @@ setup(
     description="Processing and manipulation of single-cell data",
     author="Chris Jackson",
     packages=find_packages(exclude=["tests"]),
+    install_requires=["pandas", "numpy"]
 )
