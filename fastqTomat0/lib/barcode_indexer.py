@@ -205,7 +205,7 @@ class Link10xBCCounts:
         else:
             return seq
 
-    def open_wrapper(self, file_name, mode="r"):
+    def open_wrapper(self, file_name, mode="rt"):
         if file_name.endswith(".bz2"):
             import bz2
             return bz2.BZ2File(file_name, mode=mode)
