@@ -226,7 +226,6 @@ class Link10xBCCounts:
 
 def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1,
                            include_unknowns=True):
-    columns = [IDX, BARCODE, GENOTYPE, UMI_COUNT]
 
     bc_df = []
     for idx, idx_dict in bc_dict.items():
@@ -260,7 +259,7 @@ def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_inde
                 bc_df.append({IDX: idx, BARCODE: bc1, GENOTYPE: bc2, UMI_COUNT: len(umi_set)})
 
     # Convert a list of dicts to a dataframe
-    bc_df = pd.DataFrame(bc_df, columns=columns)
+    bc_df = pd.DataFrame(bc_df, columns=COLUMNS)
     return bc_df
 
 

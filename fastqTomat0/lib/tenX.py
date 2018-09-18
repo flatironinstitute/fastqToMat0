@@ -87,7 +87,7 @@ class tenXProcessor:
 
     def open_wrapper(self, file_name, mode="r"):
         if self.file_path is not None:
-            file_name = os.path.join((self.file_path, file_name))
+            file_name = os.path.join(self.file_path, file_name)
 
         if file_name.endswith(".bz2"):
             import bz2
