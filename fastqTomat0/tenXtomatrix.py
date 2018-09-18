@@ -1,5 +1,5 @@
 from fastqTomat0.lib import tenX
-from fastqTomat0.lib.barcode_indexer import IDX, BARCODE, GENOTYPE
+from fastqTomat0.lib.barcode_indexer import IDX, BARCODE, GENOTYPE, NUM_CELLS
 
 import pandas as pd
 import argparse
@@ -30,7 +30,10 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
         df = filter_barcodes(df, bc)
 
         if bulk_up_genotypes:
-            df = df.groupby(GENOTYPE).sum()
+            grouping = df.groupby(GENOTYPE)
+            count = grouping.count().mean(axis=1).astype(int).as_frame()
+            count.columns = [NUM_CELLS]
+            df = grouping.sum().merge(grouping.count(), left_index=True, right_index=True)
 
     else:
         df = tenX.tenXProcessor(file_path=tenX_path).process_files()

@@ -13,7 +13,7 @@ UMI_MIN_QUAL = 15
 RC_TABLE = dict(A="T", G="C", T="A", C="G")
 
 # Pandas column names
-IDX, BARCODE, GENOTYPE, UMI_COUNT = 'Library_Index', 'Cell_Barcode', 'Genotype', 'UMI_Count'
+IDX, BARCODE, GENOTYPE, UMI_COUNT, NUM_CELLS = 'Library_Index', 'Cell_Barcode', 'Genotype', 'UMI_Count', 'Num_Cells'
 COLUMNS = [IDX, BARCODE, GENOTYPE, UMI_COUNT]
 
 
