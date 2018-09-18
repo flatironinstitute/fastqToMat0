@@ -65,7 +65,6 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, bc_fastq_3, out_file_path=None, is_zip
     bcs = linker.parse_fastq_mp(bc_fastq_1, bc_fastq_2, bc_fastq_3)
     bc_df = create_10x_genotype_df(bcs, allowed_indexes=allowed_indexes, max_index_mismatch=max_index_mismatch,
                                    bc2_map=bc2_map, include_unknowns=False)
-    bc_df.drop_duplicates(subset=BARCODE, keep=False)
 
     if out_file_path is not None:
         bc_df.to_csv(out_file_path, sep="\t")
