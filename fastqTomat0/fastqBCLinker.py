@@ -52,7 +52,8 @@ def main():
 
 
 def link_barcodes(bc_fastq_1, bc_fastq_2, bc_fastq_3, out_file_path=None, is_zipped=False, allowed_indexes=None,
-                  max_index_mismatch=1, bc1_pattern=PATTERN, bc2_seed=BC2_SEED, bc2_len=BC2_LENGTH, bc2_mapfile=None):
+                  max_index_mismatch=1, bc1_pattern=PATTERN, bc2_seed=BC2_SEED, bc2_len=BC2_LENGTH, bc2_mapfile=None,
+                  include_unknowns=False):
     assert len(bc_fastq_1) == len(bc_fastq_2)
 
     if bc2_mapfile is not None:
@@ -64,7 +65,7 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, bc_fastq_3, out_file_path=None, is_zip
     linker = Link10xBCCounts(bc1_pattern, bc2_len, bc2_seed, is_zipped=is_zipped)
     bcs = linker.parse_fastq_mp(bc_fastq_1, bc_fastq_2, bc_fastq_3)
     bc_df = create_10x_genotype_df(bcs, allowed_indexes=allowed_indexes, max_index_mismatch=max_index_mismatch,
-                                   bc2_map=bc2_map, include_unknowns=False)
+                                   bc2_map=bc2_map, include_unknowns=include_unknowns)
 
     if out_file_path is not None:
         bc_df.to_csv(out_file_path, sep="\t")
