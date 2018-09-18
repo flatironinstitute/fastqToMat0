@@ -31,7 +31,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
 
         if bulk_up_genotypes:
             grouping = df.groupby(GENOTYPE)
-            count = grouping.count().mean(axis=1).astype(int).as_frame()
+            count = grouping.count().mean(axis=1).astype(int).to_frame()
             count.columns = [NUM_CELLS]
             df = grouping.sum().merge(grouping.count(), left_index=True, right_index=True)
 
