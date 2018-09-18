@@ -33,7 +33,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
             grouping = df.groupby(GENOTYPE)
             count = grouping.count().mean(axis=1).astype(int).to_frame()
             count.columns = [NUM_CELLS]
-            df = grouping.sum().merge(grouping.count(), left_index=True, right_index=True)
+            df = grouping.sum().merge(count, left_index=True, right_index=True)
 
     else:
         df = tenX.tenXProcessor(file_path=tenX_path).process_files()
