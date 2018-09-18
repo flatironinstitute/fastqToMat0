@@ -13,7 +13,7 @@ UMI_MIN_QUAL = 15
 RC_TABLE = dict(A="T", G="C", T="A", C="G")
 
 # Pandas column names
-IDX, BARCODE, GENOTYPE, UMI_COUNT = 'Library_Index', 'Cell_Barcode', 'Genotype', 'Umi_Count'
+IDX, BARCODE, GENOTYPE, UMI_COUNT = 'Library_Index', 'Cell_Barcode', 'Genotype', 'UMI_Count'
 COLUMNS = [IDX, BARCODE, GENOTYPE, UMI_COUNT]
 
 
@@ -257,7 +257,7 @@ def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_inde
                         else:
                             continue
 
-                bc_df.append(dict(Index=idx, Cell_Barcode=bc1, Genotype=bc2, UMI_Count=len(umi_set)))
+                bc_df.append({IDX: idx, BARCODE: bc1, GENOTYPE: bc2, UMI_COUNT: len(umi_set)})
 
     # Convert a list of dicts to a dataframe
     bc_df = pd.DataFrame(bc_df, columns=columns)
