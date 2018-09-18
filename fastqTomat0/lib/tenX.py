@@ -57,7 +57,9 @@ class tenXProcessor:
         # Read the Market Matrix file as a dict of np.arrays
         # Keyed by the barcode sequence string
         with self.open_wrapper(matrix_file, mode="r") as mat_fh:
-            for line in mat_fh:
+            for i, line in enumerate(mat_fh):
+                if i % 1000000 == 0:
+                    print("Processing Matrix File ({i} Records Complete)".format(i=i))
                 if line.startswith("%"):
                     continue
                 larr = list(map(int, line.strip().split()))
