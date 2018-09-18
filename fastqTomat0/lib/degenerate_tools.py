@@ -101,7 +101,7 @@ def convert_pattern(pattern):
     for c in string.ascii_uppercase:
         idx = find_all_char(pattern, c)
         if len(idx) > 0:
-            pattern_idx[c] = (min(idx), max(idx))
+            pattern_idx[c] = (min(idx), max(idx) + 1)
     return pattern_idx
 
 
