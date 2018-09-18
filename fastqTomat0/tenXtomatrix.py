@@ -35,7 +35,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
 
 def filter_barcodes(tenX_df, barcode_df):
     tenX_df = tenX_df.loc[barcode_df.index.intersection(tenX_df.index)]
-    tenX_df = tenX_df.merge(barcode_df[GENOTYPE])
+    tenX_df = tenX_df.merge(barcode_df[[GENOTYPE]])
     return tenX_df
 
 
