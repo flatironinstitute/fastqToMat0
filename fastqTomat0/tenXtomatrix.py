@@ -30,7 +30,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
         df = filter_barcodes(df, bc)
 
         if bulk_up_genotypes:
-            df.groupby(GENOTYPE).sum()
+            df = df.groupby(GENOTYPE).sum()
 
     else:
         df = tenX.tenXProcessor(file_path=tenX_path).process_files()
