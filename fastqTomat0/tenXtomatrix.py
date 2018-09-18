@@ -25,7 +25,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
         bc = bc.loc[bc[IDX] == bc_file_lib_index]
         bc.index = bc[BARCODE]
         if remove_doublets:
-            bc.drop_duplicates(subset=BARCODE, keep=False)
+            bc.drop_duplicates(subset=BARCODE, keep=False, inplace=True)
         df = tenX.tenXProcessor(file_path=tenX_path, allowed_barcodes=bc.index.tolist()).process_files()
         df = filter_barcodes(df, bc)
 
