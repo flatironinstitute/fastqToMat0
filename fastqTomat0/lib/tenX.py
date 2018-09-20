@@ -55,7 +55,7 @@ class tenXProcessor:
     def read_matrix(self, matrix_file):
 
         # Read the Market Matrix file
-        with self.open_wrapper(matrix_file, mode="r") as mat_fh:
+        with self.open_wrapper(matrix_file, mode="rb") as mat_fh:
             data = mmread(mat_fh).todense().transpose()
 
         data = pd.DataFrame(data, index = self.barcode_list, columns = list(self.gene_map.keys()))
