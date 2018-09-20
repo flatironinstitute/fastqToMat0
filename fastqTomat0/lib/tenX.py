@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from scipy.io import mmread
+
 
 import os
 
@@ -51,41 +53,21 @@ class tenXProcessor:
                     continue
 
     def read_matrix(self, matrix_file):
-        dims = None
-        data = dict()
 
-        # Read the Market Matrix file as a dict of np.arrays
-        # Keyed by the barcode sequence string
+        # Read the Market Matrix file
         with self.open_wrapper(matrix_file, mode="r") as mat_fh:
-            for i, line in enumerate(mat_fh):
-                if i % 1000000 == 0:
-                    print("Processing Matrix File ({i} Records Complete)".format(i=i))
-                if line.startswith("%"):
-                    continue
-                larr = list(map(int, line.strip().split()))
-                if dims is None:
-                    dims = (larr[0], larr[1])
-                else:
-                    try:
-                        data[self.barcode_list[larr[1]]][larr[0] - 1] = larr[2]  # File is 1-indexed
-                    except KeyError:
-                        data[self.barcode_list[larr[1]]] = np.zeros((dims[0]), np.dtype('uint16'))
-                        data[self.barcode_list[larr[1]]][larr[0] - 1] = larr[2]  # File is 1-indexed
-                    except IndexError:
-                        pass
+            data = mmread(mat_fh).todense().transpose()
+
+        data = pd.DataFrame(data, index = self.barcode_list, columns = list(self.gene_map.keys()))
+        has_reads = data.sum(axis=1) > 0
+        data = data.loc[has_reads]
 
         # Remove any non-whitelisted barcodes if there's a whitelist
         if self.check_barcodes:
-            for k in list(data.keys()):
-                if k in self.allowed_barcodes:
-                    continue
-                else:
-                    data.pop(k)
+            keepers = data.index.intersection(self.allowed_barcodes)
+            data = data.loc[keepers]
 
-        df = pd.DataFrame.from_dict(data, orient='index')
-        df.columns = self.gene_map.keys()
-
-        return df
+        return data
 
     def open_wrapper(self, file_name, mode="r"):
         if self.file_path is not None:
