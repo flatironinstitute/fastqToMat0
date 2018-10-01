@@ -2,16 +2,16 @@ import numpy as np
 import pandas as pd
 from scipy.io import mmread
 
-
 import os
+
 
 class tenXProcessor:
     check_barcodes = False  # bool
     allowed_barcodes = None  # list(str)
-    file_path = None # str
+    file_path = None  # str
 
-    gene_map = None # dict (str: str)
-    barcode_list = None # list(str)
+    gene_list = None  # list (str)
+    barcode_list = None  # list(str)
 
     def __init__(self, allowed_barcodes=None, file_path=None):
         if allowed_barcodes is not None:
@@ -33,12 +33,12 @@ class tenXProcessor:
         return self.read_matrix(matrix_file)
 
     def read_genes(self, gene_file):
-        self.gene_map = dict()
+        self.gene_list = list()
         with self.open_wrapper(gene_file, mode="r") as gene_fh:
             for line in gene_fh:
                 try:
                     larr = line.strip().split()
-                    self.gene_map[larr[0]] = larr[1]
+                    self.gene_list.append(larr[0])
                 except IndexError:
                     continue
 
@@ -56,9 +56,20 @@ class tenXProcessor:
 
         # Read the Market Matrix file
         with self.open_wrapper(matrix_file, mode="rb") as mat_fh:
-            data = mmread(mat_fh).todense().transpose()
+            data = mmread(mat_fh).todense()
+            if data.shape[0] == len(self.barcode_list):
+                pass
+            elif data.shape[1] == len(self.barcode_list):
+                data = data.transpose()
+            else:
+                print("MM Data File {sh1} does not match labels ({bsh} BC, {gsh} Genes)".format(sh1=data.shape,
+                                                                                                bsh=len(
+                                                                                                    self.barcode_list),
+                                                                                                gsh=len(
+                                                                                                    self.gene_list)))
+                raise ValueError
 
-        data = pd.DataFrame(data, index = self.barcode_list, columns = list(self.gene_map.keys()))
+            data = pd.DataFrame(data, index=self.barcode_list, columns=self.gene_list)
         has_reads = data.sum(axis=1) > 0
         data = data.loc[has_reads]
 

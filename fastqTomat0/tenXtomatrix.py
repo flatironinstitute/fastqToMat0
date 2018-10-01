@@ -13,7 +13,7 @@ def main():
     ap.add_argument("-b", "--bc", dest="bc", help="Input Barcode-Genotype Map FILE", metavar="FILE", default=None)
     ap.add_argument("-i", "--bc_idx", dest="bc_idx", help="Barcode Library INDEX", metavar="INDEX", default=None)
     ap.add_argument("-o", "--output", dest="out", help="Output TSV FILE", metavar="FILE", required=True)
-    ap.add_argument("--bulkup", dest="bulk", help="Unzip FASTQ", action='store_const', const=True, default=False)
+    ap.add_argument("--bulkup", dest="bulk", help="Bulk up data", action='store_const', const=True, default=False)
     args = ap.parse_args()
     tenX_to_matrix(args.path, bc_file=args.bc, bc_file_lib_index=args.bc_idx, outfile_path=args.out,
                    bulk_up_genotypes=args.bulk)
@@ -23,7 +23,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
                    bulk_up_genotypes=False):
 
     if bc_file is not None:
-        bc = pd.read_table(bc_file, sep="\t")
+        bc = pd.read_table(bc_file, sep="\t", header=0)
         bc = bc.loc[bc[IDX] == bc_file_lib_index]
         bc.index = bc[BARCODE]
         if remove_doublets:
