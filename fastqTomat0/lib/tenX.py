@@ -37,7 +37,7 @@ class tenXProcessor:
 
     def read_barcodes(self, barcode_file):
         with self.open_wrapper(barcode_file, mode="r") as bc_fh:
-            self.barcode_list = pd.read_table(bc_fh, header=None).str.replace("-1", "").iloc[:, 0].tolist()
+            self.barcode_list = pd.read_table(bc_fh, header=None).iloc[:, 0].str.replace("-1", "").tolist()
 
     def read_matrix(self, matrix_file):
 
