@@ -48,7 +48,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
     return df
 
 def remove_doublet_barcodes(barcode_df):
-    barcode_df[UNIQUE] = barcode_df.groupby[BARCODE][GENOTYPE].transform('nunique')
+    barcode_df[UNIQUE] = barcode_df.groupby(BARCODE)[GENOTYPE].transform('nunique')
     barcode_df = barcode_df.loc[barcode_df[UNIQUE] == 1]
     return barcode_df.drop_duplicates(subset=BARCODE)
 
