@@ -16,7 +16,6 @@ class tenXProcessor:
     def __init__(self, allowed_barcodes=None, file_path=None):
         if allowed_barcodes is not None:
             self.allowed_barcodes = allowed_barcodes
-            self.check_barcodes = True
         self.file_path = file_path
 
     def process_files(self, gene_file="genes.tsv", barcode_file="barcodes.tsv", matrix_file="matrix.mtx"):
@@ -33,48 +32,29 @@ class tenXProcessor:
         return self.read_matrix(matrix_file)
 
     def read_genes(self, gene_file):
-        self.gene_list = list()
         with self.open_wrapper(gene_file, mode="r") as gene_fh:
-            for line in gene_fh:
-                try:
-                    larr = line.strip().split()
-                    self.gene_list.append(larr[0])
-                except IndexError:
-                    continue
+            self.gene_list = pd.read_table(gene_fh, header=None).iloc[:, 0].tolist()
 
     def read_barcodes(self, barcode_file):
-        self.barcode_list = list()
         with self.open_wrapper(barcode_file, mode="r") as bc_fh:
-            for line in bc_fh:
-                larr = line.strip().split("-")
-                try:
-                    self.barcode_list.append(larr[0])
-                except IndexError:
-                    continue
+            self.barcode_list = pd.read_table(bc_fh, header=None).str.replace("-1", "").iloc[:, 0].tolist()
 
     def read_matrix(self, matrix_file):
 
         # Read the Market Matrix file
         with self.open_wrapper(matrix_file, mode="rb") as mat_fh:
             data = mmread(mat_fh).todense()
-            if data.shape[0] == len(self.barcode_list):
-                pass
-            elif data.shape[1] == len(self.barcode_list):
-                data = data.transpose()
-            else:
-                print("MM Data File {sh1} does not match labels ({bsh} BC, {gsh} Genes)".format(sh1=data.shape,
-                                                                                                bsh=len(
-                                                                                                    self.barcode_list),
-                                                                                                gsh=len(
-                                                                                                    self.gene_list)))
-                raise ValueError
 
-            data = pd.DataFrame(data, index=self.barcode_list, columns=self.gene_list)
+        if data.shape[1] == len(self.barcode_list) and data.shape[0] != len(self.barcode_list):
+            data = data.transpose()
+        data = pd.DataFrame(data, index=self.barcode_list, columns=self.gene_list)
+
+        # Remove any barcodes with absolutely no reads
         has_reads = data.sum(axis=1) > 0
         data = data.loc[has_reads]
 
         # Remove any non-whitelisted barcodes if there's a whitelist
-        if self.check_barcodes:
+        if self.allowed_barcodes is not None:
             keepers = data.index.intersection(self.allowed_barcodes)
             data = data.loc[keepers]
 

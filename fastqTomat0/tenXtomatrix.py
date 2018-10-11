@@ -6,6 +6,7 @@ import argparse
 
 GENOTYPE_GROUP = 'Genotype_Group'
 REPLICATE = 'Replicate'
+UNIQUE = 'Unique'
 
 def main():
     ap = argparse.ArgumentParser(description="Process 10x Files into a Matrix File")
@@ -27,7 +28,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
         bc = bc.loc[bc[IDX] == bc_file_lib_index]
         bc.index = bc[BARCODE]
         if remove_doublets:
-            bc.drop_duplicates(subset=BARCODE, keep=False, inplace=True)
+            bc = remove_doublet_barcodes(bc)
         bc = split_genotype(bc)
 
         df = tenX.tenXProcessor(file_path=tenX_path, allowed_barcodes=bc.index.tolist()).process_files()
@@ -45,6 +46,11 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
     if outfile_path is not None:
         df.to_csv(outfile_path, sep="\t")
     return df
+
+def remove_doublet_barcodes(barcode_df):
+    barcode_df[UNIQUE] = barcode_df.groupby[BARCODE][GENOTYPE].transform('nunique')
+    barcode_df = barcode_df.loc[barcode_df[UNIQUE] == 1]
+    return barcode_df.drop_duplicates(subset=BARCODE)
 
 
 def filter_barcodes(tenX_df, barcode_df):
