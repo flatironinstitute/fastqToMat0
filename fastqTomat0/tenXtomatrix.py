@@ -26,9 +26,9 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
     if bc_file is not None:
         bc = pd.read_table(bc_file, sep="\t", header=0)
         bc = bc.loc[bc[IDX] == bc_file_lib_index]
-        bc.index = bc[BARCODE]
         if remove_doublets:
             bc = remove_doublet_barcodes(bc)
+        bc.index = bc[BARCODE]
         bc = split_genotype(bc)
 
         df = tenX.tenXProcessor(file_path=tenX_path, allowed_barcodes=bc.index.tolist()).process_files()
