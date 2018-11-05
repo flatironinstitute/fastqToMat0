@@ -60,9 +60,10 @@ def synthesize_data(distribution_file_name, single_cell_file_name, output_file_n
 
     expr_df = pd.DataFrame(synthetic_data, index=ss_df.index, columns=expr_df.index)
     expr_df = pd.concat([expr_df, meta_data], axis=1)
-    expr_df.to_csv(output_file_name, sep="\t", compression='gzip')
+    with make_opener(output_file_name, mode="w") as ofh:
+        expr_df.to_csv(ofh, sep="\t")
 
-def make_opener(filename):
+def make_opener(filename, mode="r"):
     if filename.endswith(".gz"):
         import gzip
         opener = gzip.open
@@ -71,7 +72,7 @@ def make_opener(filename):
         opener = bz2.BZ2File
     else:
         opener = open
-    return opener(filename)
+    return opener(filename, mode=mode)
 
 if __name__ == '__main__':
     main()
