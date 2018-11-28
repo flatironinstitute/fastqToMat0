@@ -7,8 +7,8 @@ EXPRESSION_MATRIX_METADATA = ['Genotype', 'Genotype_Group', 'Replicate', 'Condit
 RANDOM_SEED = 42
 
 def main():
-    ap = argparse.ArgumentParser(description="Convert bulk expression data to synthetic UMI count table")
-    ap.add_argument("-f", "--file", dest="file", help="Expression data table", metavar="FILE", default=None)
+    ap = argparse.ArgumentParser(description="Create a synthetic UMI count table")
+    ap.add_argument("-d", "--dist_file", dest="file", help="Expression data table", metavar="FILE", default=None)
     ap.add_argument("-s", "--ss_file", dest="ssfile", help="Single-Cell Expression data table", metavar="FILE", required=True)
     ap.add_argument("-o", "--out", dest="out", help="Output count table", metavar="FILE", required=True)
     ap.add_argument("--log", dest="log", help="Data is log-transformed", action='store_const', const=True, default=False)
