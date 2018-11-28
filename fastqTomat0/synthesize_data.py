@@ -44,7 +44,7 @@ def synthesize_data(distribution_file_name, single_cell_file_name, output_file_n
     print("Building Model")
 
     model = stats.rv_discrete(values=(range(len(expr_df)), expr_df))
-    synthetic_data = np.zeros((n, g), dtype=np.uint32)
+    synthetic_data = np.zeros((n, len(expr_df)), dtype=np.uint32)
 
     print("Simming Data")
 
