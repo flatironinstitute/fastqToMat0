@@ -37,8 +37,10 @@ def synthesize_data(distribution_file_name, single_cell_file_name, output_file_n
         print("Fixing Data")
         _, k = expr_df.shape
         assert k == 1
+        cols = expr_df.columns
         expr_df = expr_df.divide(expr_df.sum()).tolist()
     else:
+        cols = list(range(ss_df.shape[1]))
         expr_df = (np.ones((ss_df.shape[1], 1), dtype=np.dtype(float)) / ss_df.shape[1]).tolist()
 
     print("Building Model")
@@ -57,7 +59,7 @@ def synthesize_data(distribution_file_name, single_cell_file_name, output_file_n
 
     print("Writing Output")
 
-    synth_df = pd.DataFrame(synthetic_data, index=ss_df.index, columns=expr_df.index)
+    synth_df = pd.DataFrame(synthetic_data, index=ss_df.index, columns=cols)
     synth_df = pd.concat([expr_df, meta_data], axis=1)
     synth_df.to_csv(output_file_name, sep="\t", compression="gzip")
 
