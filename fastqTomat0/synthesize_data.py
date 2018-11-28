@@ -28,7 +28,6 @@ def synthesize_data(distribution_file_name, single_cell_file_name, output_file_n
     n, _ = ss_df.shape
     meta_data = ss_df.loc[:, EXPRESSION_MATRIX_METADATA].copy()
     umi = ss_df.drop(EXPRESSION_MATRIX_METADATA, axis=1).sum(axis=1)
-    ss_df = None
 
     if distribution_file_name is not None:
         print("Reading distribution data")
