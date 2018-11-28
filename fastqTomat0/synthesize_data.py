@@ -60,7 +60,7 @@ def synthesize_data(distribution_file_name, single_cell_file_name, output_file_n
     print("Writing Output")
 
     synth_df = pd.DataFrame(synthetic_data, index=ss_df.index, columns=cols)
-    synth_df = pd.concat([expr_df, meta_data], axis=1)
+    synth_df = pd.concat([synth_df, meta_data], axis=1)
     synth_df.to_csv(output_file_name, sep="\t", compression="gzip")
 
 if __name__ == '__main__':
