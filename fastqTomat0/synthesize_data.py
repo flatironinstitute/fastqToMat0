@@ -52,7 +52,7 @@ def synthesize_data(distribution_file_name, single_cell_file_name, output_file_n
         if i % 1000 == 0:
             print("\t[{i}/{tots}]".format(i=i, tots=n))
         reads = model.rvs(size=u)
-        count_line = np.bincount(reads, minlength=g)
+        count_line = np.bincount(reads, minlength=len(expr_df))
         synthetic_data[i, :] = count_line
 
     print("Writing Output")
