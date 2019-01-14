@@ -8,6 +8,7 @@ GENOTYPE_GROUP = 'Genotype_Group'
 REPLICATE = 'Replicate'
 UNIQUE = 'Unique'
 
+
 def main():
     ap = argparse.ArgumentParser(description="Process 10x Files into a Matrix File")
     ap.add_argument("-p", "--path", dest="path", help="Input File PATH", metavar="PATH", required=True)
@@ -22,10 +23,10 @@ def main():
 
 def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path=None, remove_doublets=True,
                    bulk_up_genotypes=False):
-
     if bc_file is not None:
         bc = pd.read_table(bc_file, sep="\t", header=0)
-        bc = bc.loc[bc[IDX] == bc_file_lib_index]
+        if bc_file_lib_index is not None:
+            bc = bc.loc[bc[IDX] == bc_file_lib_index]
         if remove_doublets:
             bc = remove_doublet_barcodes(bc)
         bc.index = bc[BARCODE]
@@ -47,6 +48,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
         df.to_csv(outfile_path, sep="\t")
     return df
 
+
 def remove_doublet_barcodes(barcode_df):
     barcode_df[UNIQUE] = barcode_df.groupby(BARCODE)[GENOTYPE].transform('nunique')
     barcode_df = barcode_df.loc[barcode_df[UNIQUE] == 1]
@@ -58,10 +60,12 @@ def filter_barcodes(tenX_df, barcode_df):
     tenX_df = tenX_df.merge(barcode_df[[GENOTYPE, GENOTYPE_GROUP, REPLICATE]], left_index=True, right_index=True)
     return tenX_df
 
+
 def split_genotype(barcode_df):
     split_genotype = barcode_df[GENOTYPE].str.split(pat="_", expand=True)
     split_genotype.columns = [GENOTYPE_GROUP, REPLICATE]
     return barcode_df.merge(split_genotype, left_index=True, right_index=True)
+
 
 if __name__ == '__main__':
     main()
