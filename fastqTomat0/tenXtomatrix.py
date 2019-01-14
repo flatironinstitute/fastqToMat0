@@ -16,13 +16,14 @@ def main():
     ap.add_argument("-i", "--bc_idx", dest="bc_idx", help="Barcode Library INDEX", metavar="INDEX", default=None)
     ap.add_argument("-o", "--output", dest="out", help="Output TSV FILE", metavar="FILE", required=True)
     ap.add_argument("--bulkup", dest="bulk", help="Bulk up data", action='store_const', const=True, default=False)
+    ap.add_argument("--gzip", dest="gzip", help="GZIP output", action='store_const', const=True, default=False)
     args = ap.parse_args()
     tenX_to_matrix(args.path, bc_file=args.bc, bc_file_lib_index=args.bc_idx, outfile_path=args.out,
-                   bulk_up_genotypes=args.bulk)
+                   bulk_up_genotypes=args.bulk, gzip_output = args.gzip)
 
 
 def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path=None, remove_doublets=True,
-                   bulk_up_genotypes=False):
+                   bulk_up_genotypes=False, gzip_output=False):
     if bc_file is not None:
         bc = pd.read_table(bc_file, sep="\t", header=0)
         if bc_file_lib_index is not None:
@@ -45,7 +46,10 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
         df = tenX.tenXProcessor(file_path=tenX_path).process_files()
 
     if outfile_path is not None:
-        df.to_csv(outfile_path, sep="\t")
+        if gzip_output:
+            df.to_csv(outfile_path, sep="\t", compression="gzip")
+        else:
+            df.to_csv(outfile_path, sep="\t")
     return df
 
 
