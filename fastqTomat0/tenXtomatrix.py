@@ -18,19 +18,21 @@ def main():
     ap.add_argument("--bulkup", dest="bulk", help="Bulk up data", action='store_const', const=True, default=False)
     ap.add_argument("--gzip", dest="gzip", help="GZIP output", action='store_const', const=True, default=False)
     ap.add_argument("--feature_file_name", dest="gene_file_name", help="Name of the cellranger feature file",
-                    metavar="NAME", default="genes.tsv")
+                    metavar="NAME", default=tenX.GENE_FILE)
     ap.add_argument("--barcode_file_name", dest="bc_file_name", help="Name of the cellranger barcode file",
-                    metavar="NAME", default="barcodes.tsv")
+                    metavar="NAME", default=tenX.BARCODE_FILE)
+    ap.add_argument("--matrix_file_name", dest="matrix_file_name", help="Name of the cellranger matrix file",
+                    metavar="NAME", default=tenX.MATRIX_FILE)
     args = ap.parse_args()
 
     tenX_to_matrix(args.path, bc_file=args.bc, bc_file_lib_index=args.bc_idx, outfile_path=args.out,
                    bulk_up_genotypes=args.bulk, gzip_output = args.gzip, gene_file_name=args.gene_file_name,
-                   bc_file_name=args.bc_file_name)
+                   bc_file_name=args.bc_file_name, matrix_file_name=args.matrix_file_name)
 
 
 def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path=None, remove_doublets=True,
                    bulk_up_genotypes=False, gzip_output=False, gene_file_name=tenX.GENE_FILE,
-                   bc_file_name=tenX.BARCODE_FILE):
+                   bc_file_name=tenX.BARCODE_FILE, matrix_file_name=tenX.MATRIX_FILE):
 
     if bc_file is not None:
         bc = pd.read_table(bc_file, sep="\t", header=0)
@@ -42,7 +44,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
         bc = split_genotype(bc)
 
         txp = tenX.tenXProcessor(file_path=tenX_path, allowed_barcodes=bc.index.tolist())
-        df = txp.process_files(gene_file=gene_file_name, barcode_file=bc_file_name)
+        df = txp.process_files(gene_file=gene_file_name, barcode_file=bc_file_name, matrix_file=matrix_file_name)
         df = filter_barcodes(df, bc)
 
         if bulk_up_genotypes:
