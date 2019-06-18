@@ -4,6 +4,9 @@ from scipy.io import mmread
 
 import os
 
+GENE_FILE = "genes.tsv"
+BARCODE_FILE = "barcodes.tsv"
+MATRIX_FILE = "matrix.mtx"
 
 class tenXProcessor:
     check_barcodes = False  # bool
@@ -18,7 +21,7 @@ class tenXProcessor:
             self.allowed_barcodes = allowed_barcodes
         self.file_path = file_path
 
-    def process_files(self, gene_file="genes.tsv", barcode_file="barcodes.tsv", matrix_file="matrix.mtx"):
+    def process_files(self, gene_file=GENE_FILE, barcode_file=BARCODE_FILE, matrix_file=MATRIX_FILE):
         """
 
         :param gene_file: str
