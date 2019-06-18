@@ -17,8 +17,7 @@ class tenXProcessor:
     barcode_list = None  # list(str)
 
     def __init__(self, allowed_barcodes=None, file_path=None):
-        if allowed_barcodes is not None:
-            self.allowed_barcodes = allowed_barcodes
+        self.allowed_barcodes = allowed_barcodes
         self.file_path = file_path
 
     def process_files(self, gene_file=GENE_FILE, barcode_file=BARCODE_FILE, matrix_file=MATRIX_FILE):
@@ -35,10 +34,11 @@ class tenXProcessor:
         return self.read_matrix(matrix_file)
 
     def read_genes(self, gene_file):
-        self.gene_list = pd.read_csv(gene_file, sep="\t", header=None).iloc[:, 0].tolist()
+        self.gene_list = pd.read_csv(self.pathify_file(gene_file), sep="\t", header=None).iloc[:, 0].tolist()
 
     def read_barcodes(self, barcode_file):
-        self.barcode_list = pd.read_csv(barcode_file, sep="\t", header=None).iloc[:, 0].str.replace("-1", "").tolist()
+        barcodes = pd.read_csv(self.pathify_file(barcode_file), sep="\t", header=None)
+        self.barcode_list = barcodes.iloc[:, 0].str.replace("-1", "").tolist()
 
     def read_matrix(self, matrix_file):
 
@@ -62,8 +62,7 @@ class tenXProcessor:
         return data
 
     def open_wrapper(self, file_name, mode="r"):
-        if self.file_path is not None:
-            file_name = os.path.join(self.file_path, file_name)
+        file_name = self.pathify_file(file_name)
 
         if file_name.endswith(".bz2"):
             import bz2
@@ -73,3 +72,9 @@ class tenXProcessor:
             return gzip.open(file_name, mode=mode)
         else:
             return open(file_name, mode=mode)
+
+    def pathify_file(self, file_name):
+        if self.file_path is not None:
+            return os.path.join(self.file_path, file_name)
+        else:
+            return file_name

@@ -31,7 +31,7 @@ def main():
 def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path=None, remove_doublets=True,
                    bulk_up_genotypes=False, gzip_output=False, gene_file_name=tenX.GENE_FILE,
                    bc_file_name=tenX.BARCODE_FILE):
-    
+
     if bc_file is not None:
         bc = pd.read_table(bc_file, sep="\t", header=0)
         if bc_file_lib_index is not None:
