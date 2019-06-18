@@ -35,12 +35,10 @@ class tenXProcessor:
         return self.read_matrix(matrix_file)
 
     def read_genes(self, gene_file):
-        with self.open_wrapper(gene_file, mode="r") as gene_fh:
-            self.gene_list = pd.read_table(gene_fh, header=None).iloc[:, 0].tolist()
+        self.gene_list = pd.read_csv(gene_file, sep="\t", header=None).iloc[:, 0].tolist()
 
     def read_barcodes(self, barcode_file):
-        with self.open_wrapper(barcode_file, mode="r") as bc_fh:
-            self.barcode_list = pd.read_table(bc_fh, header=None).iloc[:, 0].str.replace("-1", "").tolist()
+        self.barcode_list = pd.read_csv(barcode_file, sep="\t", header=None).iloc[:, 0].str.replace("-1", "").tolist()
 
     def read_matrix(self, matrix_file):
 
