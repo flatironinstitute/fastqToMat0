@@ -22,7 +22,7 @@ def main():
     args = ap.parse_args()
 
     tenX_to_matrix(args.path, bc_file=args.bc, bc_file_lib_index=args.bc_idx, outfile_path=args.out,
-                   bulk_up_genotypes=args.bulk, gzip_output = args.gzip)
+                   bulk_up_genotypes=args.bulk, gzip_output = args.gzip, gene_file_name=args.gene_file_name)
 
 
 def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path=None, remove_doublets=True,
