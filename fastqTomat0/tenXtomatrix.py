@@ -54,7 +54,7 @@ def tenX_to_matrix(tenX_path, bc_file=None, bc_file_lib_index=None, outfile_path
             df = grouping.sum().merge(count, left_index=True, right_index=True)
 
     else:
-        txp = tenX.tenXProcessor(file_path=tenX_path).process_files()
+        txp = tenX.tenXProcessor(file_path=tenX_path)
         df = txp.process_files(gene_file=gene_file_name, barcode_file=bc_file_name, matrix_file=matrix_file_name)
 
     if outfile_path is not None:
