@@ -20,11 +20,11 @@ def process_sudoku_reads(output_file, fastqr1, fastqr2, fastqi1, fastqi2, bc_see
 
     print("Loading index table")
 
-    index_table = pd.read_csv(index_table_file, index_col=None, sep="\t")
-    allowed_i5 = index_table[I5_COL].tolist()
-    allowed_i7 = index_table[I7_COL].tolist()
+    idx_table = pd.read_csv(index_table_file, index_col=None, sep="\t")
+    allowed_i5 = idx_table[I5_COL].tolist()
+    allowed_i7 = idx_table[I7_COL].tolist()
 
-    print("Loaded {n} pools with {i5} i5 indices and {i7} i7 indices".format(n=index_table.shape[0],
+    print("Loaded {n} pools with {i5} i5 indices and {i7} i7 indices".format(n=idx_table.shape[0],
                                                                              i5=len(allowed_i5),
                                                                              i7=len(allowed_i7)))
 
@@ -54,8 +54,11 @@ def process_sudoku_reads(output_file, fastqr1, fastqr2, fastqi1, fastqi2, bc_see
         for i7 in list(i5_ref.keys()):
             i57_ref = bcs[i5][i7]
 
-            group = index_table.loc[(index_table[I5_COL] == i5) & (index_table[I7_COL] == i7), GROUP_COL].tolist()[0]
-            pool = index_table.loc[(index_table[I5_COL] == i5) & (index_table[I7_COL] == i7), LOC_COL].tolist()[0]
+            try:
+                group = idx_table.loc[(idx_table[I5_COL] == i5) & (idx_table[I7_COL] == i7), GROUP_COL].tolist()[0]
+                pool = idx_table.loc[(idx_table[I5_COL] == i5) & (idx_table[I7_COL] == i7), LOC_COL].tolist()[0]
+            except IndexError:
+                continue
 
             print("Processing {g} {p}".format(g=group, p=pool))
 
