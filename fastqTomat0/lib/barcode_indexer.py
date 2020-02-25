@@ -9,7 +9,7 @@ from fastqTomat0.lib.fastq import fastqProcessor
 
 # These are the minimum quality scores required to consider a sequence as a valid barcode
 BC_MIN_QUAL = 25
-UMI_MIN_QUAL = 15
+UMI_MIN_QUAL = 25
 RC_TABLE = dict(A="T", G="C", T="A", C="G")
 
 # Pandas column names
@@ -98,7 +98,116 @@ class ReadFromSeed:
         return rc_str(seq), qual[::-1]
 
 
-class Link10xBCCounts:
+class Linker:
+
+    scanner = None
+    index_min_qual = None
+
+    def parse_transcript_bc(self, seq, qual):
+        if isinstance(self.scanner, list):
+            for sc in self.scanner:
+                bc = sc.scan_sequence(seq, qual)
+                if bc is not None:
+                    return bc
+            raise BCNotFoundError
+        else:
+            bc = self.scanner.scan_sequence(seq, qual)
+            if bc is None:
+                raise BCNotFoundError
+            else:
+                return bc
+
+    def parse_index(self, seq, qual):
+        if min(qual) < self.index_min_qual:
+            raise QualityError
+        else:
+            return seq
+
+    def read_pattern(self, bc_pattern):
+        pattern_idx = convert_pattern(bc_pattern)
+        self.bc1_l, self.bc1_r = pattern_idx["B"]
+        self.umi_l, self.umi_r = pattern_idx["U"]
+
+        if self.bc1_l > self.umi_r and self.umi_l > self.bc1_r:
+            raise ValueError("Incompatible pattern")
+
+    @staticmethod
+    def open_wrapper(file_name, mode="rt"):
+        if file_name.endswith(".bz2"):
+            import bz2
+            return bz2.BZ2File(file_name, mode=mode)
+        elif file_name.endswith(".gz"):
+            import gzip
+            return gzip.open(file_name, mode=mode)
+        else:
+            return open(file_name, mode=mode)
+
+
+class LinkSudokuBC(Linker):
+    """
+    Link the sudoku amplicon barcodes to the appropriate indexes
+    """
+
+    def __init__(self, bc_pattern, bc_len, bc_min_qual=BC_MIN_QUAL, index_min_qual=UMI_MIN_QUAL, is_zipped=False):
+        if isinstance(bc_pattern, list) and isinstance(bc_len, list):
+            self.scanner = [ReadFromSeed(a, b, min_quality=bc_min_qual) for a, b in zip(bc_pattern, bc_len)]
+        else:
+            self.scanner = ReadFromSeed(bc_pattern, bc_len, min_quality=bc_min_qual)
+        self.gz = is_zipped
+        self.index_min_qual = index_min_qual
+
+    def parse_fastq_mp(self, fastq_i7, fastq_i5, fastq_r3, cores=None):
+        if cores is None:
+            cores = len(fastq_i7)
+
+        import multiprocessing
+        mp_pool = multiprocessing.Pool(processes=cores)
+
+        bcs = dict()
+        for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(fastq_i7, fastq_i5, fastq_r3)):
+            bcs = merge_bcs(bcs, bc_dict)
+
+        return bcs
+
+    def unpack_tuple_mp(self, fq_tuple):
+        fastq1, fastq2, fastq3 = fq_tuple
+        return self.parse_fastq(fastq1, fastq2, fastq3)
+
+    def parse_fastq(self, fastq1, fastq2, fastq3):
+        totes, pf, uniques = 0, 0, 0
+        bc_seen = {}
+
+        fq1_fh, fq2_fh, fq3_fh = self.open_wrapper(fastq1), self.open_wrapper(fastq2), self.open_wrapper(fastq3)
+        for fastq_records in fastqProcessor().fastq_gen(fq1_fh, fq2_fh, fq3_fh):
+
+            _, seq1, qual1 = fastq_records[0]
+            _, seq2, qual2 = fastq_records[1]
+            _, seq3, qual3 = fastq_records[2]
+
+            if totes % 100000 == 0:
+                print("Parsed {totes} sequence reads".format(totes=totes))
+
+            totes += 1
+
+            try:
+                idx_i7 = self.parse_index(seq1, qual1)
+                idx_i5 = self.parse_index(seq2, qual2)
+                bc = self.parse_transcript_bc(seq3, qual3)
+                pf += 1
+            except (QualityError, BCNotFoundError, IndexError):
+                continue
+
+            try:
+                bc_seen[idx_i5][idx_i7][bc] += 1
+            except KeyError:
+                nest_dict(bc_seen, idx_i5, idx_i7, bc)
+                bc_seen[idx_i5][idx_i7][bc] = 1
+
+        fq1_fh.close(), fq2_fh.close(), fq3_fh.close()
+        return bc_seen
+
+
+class Link10xBCCounts(Linker):
     """
     Link the 10x genomics triple-read in order to connect 10x individual-cell barcodes with transcript-level barcode
     present in the genome
@@ -191,37 +300,6 @@ class Link10xBCCounts:
         umi = seq[self.umi_l:self.umi_r]
 
         return bc, umi
-
-    def parse_transcript_bc(self, seq, qual):
-        bc = self.scanner.scan_sequence(seq, qual)
-        if bc is None:
-            raise BCNotFoundError
-        else:
-            return bc
-
-    def parse_index(self, seq, qual):
-        if min(qual) < self.index_min_qual:
-            raise QualityError
-        else:
-            return seq
-
-    def open_wrapper(self, file_name, mode="rt"):
-        if file_name.endswith(".bz2"):
-            import bz2
-            return bz2.BZ2File(file_name, mode=mode)
-        elif file_name.endswith(".gz"):
-            import gzip
-            return gzip.open(file_name, mode=mode)
-        else:
-            return open(file_name, mode=mode)
-
-    def read_pattern(self, bc_pattern):
-        pattern_idx = convert_pattern(bc_pattern)
-        self.bc1_l, self.bc1_r = pattern_idx["B"]
-        self.umi_l, self.umi_r = pattern_idx["U"]
-
-        if self.bc1_l > self.umi_r and self.umi_l > self.bc1_r:
-            raise ValueError("Incompatible pattern")
 
 
 def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1,

@@ -6,6 +6,6 @@ setup(
     license="MIT",
     description="Processing and manipulation of single-cell data",
     author="Chris Jackson",
-    packages=find_packages(exclude=["tests"]),
+    packages=find_packages(include=["fastqTomat0", "fastqTomat0.*"], exclude=["*.tests"]),
     install_requires=["pandas", "numpy"]
 )
