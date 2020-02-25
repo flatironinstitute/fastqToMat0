@@ -165,7 +165,7 @@ class LinkSudokuBC(Linker):
 
         bcs = dict()
         for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(fastq_i7, fastq_i5, fastq_r3)):
-            bcs = merge_bcs(bcs, bc_dict)
+            bcs = self.merge_bcs(bcs, bc_dict)
 
         return bcs
 
@@ -200,11 +200,23 @@ class LinkSudokuBC(Linker):
             try:
                 bc_seen[idx_i5][idx_i7][bc] += 1
             except KeyError:
-                nest_dict(bc_seen, idx_i5, idx_i7, bc)
+                nest_dict(bc_seen, idx_i5, idx_i7)
                 bc_seen[idx_i5][idx_i7][bc] = 1
 
         fq1_fh.close(), fq2_fh.close(), fq3_fh.close()
         return bc_seen
+
+    @staticmethod
+    def merge_bcs(bc_dict1, bc_dict2):
+        for idx_i5, level_1_dict in bc_dict2.items():
+            for idx_i7, level_2_dict in level_1_dict.items():
+                for bc, count in level_2_dict.items():
+                    try:
+                        bc_dict1[idx_i5][idx_i7][bc] += count
+                    except KeyError:
+                        nest_dict(bc_dict1, idx_i5, idx_i7)
+                        bc_dict1[idx_i5][idx_i7][bc] = count
+        return bc_dict1
 
 
 class Link10xBCCounts(Linker):
@@ -252,7 +264,7 @@ class Link10xBCCounts(Linker):
 
         bcs = dict()
         for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(fastq1, fastq2, fastq3)):
-            bcs = merge_bcs(bcs, bc_dict)
+            bcs = self.merge_bcs(bcs, bc_dict)
 
         return bcs
 
@@ -300,6 +312,18 @@ class Link10xBCCounts(Linker):
         umi = seq[self.umi_l:self.umi_r]
 
         return bc, umi
+
+    @staticmethod
+    def merge_bcs(bc_dict1, bc_dict2):
+        for idx, level_1_dict in bc_dict2.items():
+            for bc1, level_2_dict in level_1_dict.items():
+                for bc2, umi_set in level_2_dict.items():
+                    try:
+                        bc_dict1[idx][bc1][bc2].union(umi_set)
+                    except KeyError:
+                        nest_dict(bc_dict1, idx, bc1, bc2)
+                        bc_dict1[idx][bc1][bc2] = umi_set
+        return bc_dict1
 
 
 def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1,
@@ -366,18 +390,6 @@ def reindex_for_mismatches(idx, allowed_idx, max_mismatch=1):
         if sequence_mismatch_degenerate(idx, kidx) <= max_mismatch:
             return kidx
     raise IndexError
-
-
-def merge_bcs(bc_dict1, bc_dict2):
-    for idx, level_1_dict in bc_dict2.items():
-        for bc1, level_2_dict in level_1_dict.items():
-            for bc2, umi_set in level_2_dict.items():
-                try:
-                    bc_dict1[idx][bc1][bc2].union(umi_set)
-                except KeyError:
-                    nest_dict(bc_dict1, idx, bc1, bc2)
-                    bc_dict1[idx][bc1][bc2] = umi_set
-    return bc_dict1
 
 
 def nest_dict(d, *keys):
