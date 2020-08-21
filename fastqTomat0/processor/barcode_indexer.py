@@ -408,6 +408,31 @@ def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_inde
     return bc_df
 
 
+def create_10x_map_df(linked_bcs_dict, bc2_map, include_unknowns=True):
+
+    bc_df = []
+
+    # If the index is OK, print all of the BC1, BC2, UMI counts for that index
+    for bc1, bc2_dict in linked_bcs_dict.items():
+
+        # Print the Index, Barcode 1, Barcode 2, and UMI counts
+        for bc2, umi_set in bc2_dict.items():
+            if bc2_map is not None:
+                try:
+                    bc2 = bc2_map[bc2]
+                except KeyError:
+                    if include_unknowns:
+                        pass
+                    else:
+                        continue
+
+            bc_df.append({BARCODE: bc1, GENOTYPE: bc2, UMI_COUNT: len(umi_set)})
+
+    # Convert a list of dicts to a dataframe
+    bc_df = pd.DataFrame(bc_df, columns=COLUMNS)
+    return bc_df
+
+
 def merge_mismatches(sequence_dict, allowed_sequences, max_mismatch=1):
     for seq in list(sequence_dict.keys()):
         if seq in allowed_sequences:

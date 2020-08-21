@@ -1,5 +1,5 @@
-from fastqTomat0.lib import gff
-from fastqTomat0.lib import steinmetz
+from fastqTomat0.processor import gff
+from fastqTomat0.processor import steinmetz
 import argparse
 
 ap = argparse.ArgumentParser(description="Modify GFF file transcript start and stop locations")

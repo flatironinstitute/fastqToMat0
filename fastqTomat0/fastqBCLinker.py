@@ -1,7 +1,7 @@
 from __future__ import print_function
 
-from fastqTomat0.lib.fasta import fasta_to_dict
-from fastqTomat0.lib.barcode_indexer import Link10xBCCounts, create_10x_genotype_df
+from fastqTomat0.processor.fasta import fasta_to_dict
+from fastqTomat0.processor.barcode_indexer import Link10xBCCounts, create_10x_genotype_df
 
 import argparse
 import multiprocessing

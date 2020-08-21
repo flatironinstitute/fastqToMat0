@@ -5,8 +5,8 @@ import gzip
 import os
 import multiprocessing
 
-from fastqTomat0.lib.fastq import fastq_gen
-from fastqTomat0.lib.degenerate_tools import convert_pattern
+from fastqTomat0.processor.fastq import fastq_gen
+from fastqTomat0.processor.degenerate_tools import convert_pattern
 
 BC_MIN_QUAL = 25
 UMI_MIN_QUAL = 15

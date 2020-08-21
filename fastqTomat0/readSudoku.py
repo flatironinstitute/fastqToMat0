@@ -1,4 +1,4 @@
-from fastqTomat0.lib.barcode_indexer import LinkSudokuBC
+from fastqTomat0.processor.barcode_indexer import LinkSudokuBC
 
 import pandas as pd
 import textdistance

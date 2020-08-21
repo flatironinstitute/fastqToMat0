@@ -1,5 +1,5 @@
-from fastqTomat0.lib import tenX
-from fastqTomat0.lib.barcode_indexer import IDX, BARCODE, GENOTYPE, NUM_CELLS
+from fastqTomat0.processor import tenX
+from fastqTomat0.processor.barcode_indexer import IDX, BARCODE, GENOTYPE, NUM_CELLS
 
 import pandas as pd
 import argparse

@@ -9,7 +9,7 @@ import subprocess
 
 import pandas as pd
 
-from fastqTomat0.lib.degenerate_tools import search_list_degenerate, convert_pattern
+from fastqTomat0.processor.degenerate_tools import search_list_degenerate, convert_pattern
 
 PATTERN = "BBBBBBBBBBBBBBBBUUUUUUUUUU"
 

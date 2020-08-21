@@ -1,11 +1,8 @@
 from __future__ import print_function
 
-from fastqTomat0.lib.fasta import fasta_to_dict
-from fastqTomat0.lib.barcode_indexer import Link10xv31, create_10x_genotype_df
+from fastqTomat0.processor.barcode_indexer import Link10xv31, create_10x_map_df
 
 import argparse
-import multiprocessing
-
 import pandas as pd
 
 # These are the minimum quality scores required to consider a sequence as a valid barcode
@@ -45,24 +42,28 @@ def main():
 
     args = ap.parse_args()
 
-    link_barcodes(args.fastq1, args.fastq2, args.out, is_zipped=args.gzip, cores=args.cores,
+    link_barcodes(args.fastq1, args.fastq2, args.out, is_zipped=args.gzip,
                   bc2_seed=args.bc_seed, bc2_len=args.bc_len, bc1_whitelist=args.bc_white, bc2_mapfile=args.bc_fasta)
 
 
-def link_barcodes(bc_fastq_1, bc_fastq_2, out_file_path=None, is_zipped=False, cores=1,
+def link_barcodes(bc_fastq_1, bc_fastq_2, out_file_path=None, is_zipped=False,
                   max_index_mismatch=1, bc1_pattern=PATTERN, bc2_seed=BC2_SEED, bc2_len=BC2_LENGTH, bc2_mapfile=None,
                   include_unknowns=False, bc1_whitelist=None):
 
     assert len(bc_fastq_1) == len(bc_fastq_2)
 
+    # Load whitelists
     bc1_whitelist = pd.read_csv(bc1_whitelist, header=None) if bc1_whitelist is not None else None
     bc2_map = pd.read_csv(bc2_mapfile) if bc2_mapfile is not None else None
     bc2_whitelist = bc2_map.iloc[:, 0].tolist() if bc2_map is not None else None
 
+    # Create a transcript to cell barcode linking map
     linker = Link10xv31(bc1_pattern, bc2_len, bc2_seed, is_zipped=is_zipped, bc1_whitelist=bc1_whitelist,
                         bc2_whitelist=bc2_whitelist)
     bcs = linker.parse_fastq_mp(bc_fastq_1, bc_fastq_2)
-    bc_df = create_10x_genotype_df(bcs, allowed_indexes=None, max_index_mismatch=max_index_mismatch,
+
+    # Convert the output to a dataframe
+    bc_df = create_10x_map_df(bcs, allowed_indexes=None, max_index_mismatch=max_index_mismatch,
                                    bc2_map=bc2_map, include_unknowns=include_unknowns)
 
     if out_file_path is not None:
