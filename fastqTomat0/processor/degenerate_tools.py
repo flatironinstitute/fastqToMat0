@@ -36,6 +36,11 @@ SIMPLE_REGEX = {"A": ["A"],
                 "H": ["A", "T", "C"],
                 "B": ["T", "G", "C"]}
 
+HAMMING_1 = {"A": ["T", "G", "C"],
+             "C": ["A", "G", "T"],
+             "G": ["A", "T", "C"],
+             "T": ["A", "G", "C"]}
+
 #TODO: Figure out a non hacky way to make this work. Or dont.
 if sys.version_info[0] >= 3:
     RC_TABLE = str.maketrans(dict(A="T", G="C", T="A", C="G"))
@@ -115,3 +120,27 @@ def find_all_char(sstr, character):
 
 def rc_str(str1):
     return str1.upper().translate(RC_TABLE)[::-1]
+
+
+def make_merge_map(bc_list):
+
+    merge_map = {}
+
+    def hamming_dist_1_gen(seq_str):
+        for i, c in enumerate(seq_str.upper()):
+            for n in HAMMING_1[c]:
+                yield seq_str[0:i] + n + seq_str[i + 1:]
+
+    for bc in bc_list:
+        bc = bc.upper()
+        merge_map[bc] = bc
+        for degen in hamming_dist_1_gen(bc):
+            merge_map[degen] = bc
+
+    for bc in bc_list:
+        merge_map[bc] = bc
+
+    return merge_map
+
+
+

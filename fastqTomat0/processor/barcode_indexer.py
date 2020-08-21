@@ -3,8 +3,8 @@ from __future__ import print_function
 import pandas as pd
 import re
 
-from fastqTomat0.lib.degenerate_tools import make_regex_str, rc_str, convert_pattern
-from fastqTomat0.lib.degenerate_tools import search_list_degenerate, sequence_mismatch_degenerate
+from fastqTomat0.lib.degenerate_tools import (make_regex_str, rc_str, convert_pattern, search_list_degenerate,
+                                              sequence_mismatch_degenerate, make_merge_map)
 from fastqTomat0.lib.fastq import fastqProcessor
 
 # These are the minimum quality scores required to consider a sequence as a valid barcode
@@ -243,8 +243,13 @@ class Link10xBCCounts(Linker):
     # Index
     index_min_qual = None  # int
 
-    def __init__(self, bc1_pattern, bc2_len, bc2_seed, is_zipped=False, bc1_min_qual=BC_MIN_QUAL,
-                 bc2_min_qual=BC_MIN_QUAL, umi_min_qual=UMI_MIN_QUAL, index_min_qual=UMI_MIN_QUAL):
+    # Whitelists
+    bc1_whitelist = None
+    bc2_whitelist = None
+
+    def __init__(self, bc1_pattern, bc2_len, bc2_seed, bc1_whitelist=None, bc2_whitelist=None, is_zipped=False,
+                 bc1_min_qual=BC_MIN_QUAL, bc2_min_qual=BC_MIN_QUAL, umi_min_qual=UMI_MIN_QUAL,
+                 index_min_qual=UMI_MIN_QUAL):
 
         self.scanner = ReadFromSeed(bc2_seed, bc2_len, min_quality=bc2_min_qual)
         self.read_pattern(bc1_pattern)
@@ -254,6 +259,9 @@ class Link10xBCCounts(Linker):
         self.bc2_min_qual = bc2_min_qual
         self.umi_min_qual = umi_min_qual
         self.index_min_qual = index_min_qual
+
+        self.bc1_whitelist = make_merge_map(bc1_whitelist) if bc1_whitelist is not None else None
+        self.bc2_whitelist = make_merge_map(bc2_whitelist) if bc2_whitelist is not None else None
 
     def parse_fastq_mp(self, fastq1, fastq2, fastq3, cores=None):
         if cores is None:
@@ -324,6 +332,41 @@ class Link10xBCCounts(Linker):
                         nest_dict(bc_dict1, idx, bc1, bc2)
                         bc_dict1[idx][bc1][bc2] = umi_set
         return bc_dict1
+
+
+class Link10xv31(Link10xBCCounts):
+
+    def parse_fastq(self, fastq1, fastq2):
+        bc_seen = {}
+
+        with self.open_wrapper(fastq1) as fq1_fh, self.open_wrapper(fastq2) as fq2_fh:
+            for i, fastq_records in enumerate(fastqProcessor().fastq_gen(fq1_fh, fq2_fh)):
+
+                _, seq1, qual1 = fastq_records[0]
+                _, seq2, qual2 = fastq_records[1]
+
+                print("Parsed {i} sequence reads".format(i=i)) if i % 100000 == 0 else None
+
+                try:
+                    bc1, umi = self.parse_10x_bc(seq1, qual1)
+                    bc2 = self.parse_transcript_bc(seq2, qual2)
+                except (QualityError, BCNotFoundError, IndexError):
+                    continue
+
+                # Fix barcodes to the nearest barcode by hamming distance of 1
+                try:
+                    bc1 = self.bc1_whitelist[bc1] if self.bc1_whitelist is not None else bc1
+                    bc2 = self.bc1_whitelist[bc2] if self.bc2_whitelist is not None else bc2
+                except KeyError:
+                    continue
+
+                try:
+                    bc_seen[bc1][bc2].add(umi)
+                except KeyError:
+                    nest_dict(bc_seen, bc1, bc2)
+                    bc_seen[bc1][bc2] = set(umi)
+
+        return bc_seen
 
 
 def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1,

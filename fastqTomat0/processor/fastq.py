@@ -53,18 +53,21 @@ class fastqProcessor:
                 record = []
                 cid = None
                 for fh in fhs:
-                    (c, s, q) = self.fastq_process_file(fh, self.phred)
+                    if fh is None:
+                        record.append((None, None, None))
+                    else:
+                        (c, s, q) = self.fastq_process_file(fh, self.phred)
 
-                    # If verify_ids was set, assert that the sequence IDs all match
-                    if self.verify and cid is not None:
-                        try:
-                            assert c.startswith(cid)
-                        except AssertionError:
-                            print("ID mismatch (Record {i}): {cid} != {oid}".format(i=i, cid=cid, oid=c))
-                            raise
-                    cid = self.extract_control_id(c)
+                        # If verify_ids was set, assert that the sequence IDs all match
+                        if self.verify and cid is not None:
+                            try:
+                                assert c.startswith(cid)
+                            except AssertionError:
+                                print("ID mismatch (Record {i}): {cid} != {oid}".format(i=i, cid=cid, oid=c))
+                                raise
+                        cid = self.extract_control_id(c)
 
-                    record.append((c, s, q))
+                        record.append((c, s, q))
                 yield record
             except StopIteration:
                 break
