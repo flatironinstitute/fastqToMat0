@@ -54,7 +54,7 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, out_file_path=None, is_zipped=False,
 
     print("Loading whitelists")
     # Load whitelists
-    bc1_whitelist = pd.read_csv(bc1_whitelist, header=None).iloc[0, :].tolist() if bc1_whitelist is not None else None
+    bc1_whitelist = pd.read_csv(bc1_whitelist, header=None).iloc[:, 0].tolist() if bc1_whitelist is not None else None
     bc2_map = pd.read_csv(bc2_mapfile) if bc2_mapfile is not None else None
     bc2_whitelist = bc2_map.iloc[:, 0].tolist() if bc2_map is not None else None
 
