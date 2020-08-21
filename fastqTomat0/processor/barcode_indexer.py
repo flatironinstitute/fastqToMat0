@@ -3,9 +3,9 @@ from __future__ import print_function
 import pandas as pd
 import re
 
-from fastqTomat0.lib.degenerate_tools import (make_regex_str, rc_str, convert_pattern, search_list_degenerate,
-                                              sequence_mismatch_degenerate, make_merge_map)
-from fastqTomat0.lib.fastq import fastqProcessor
+from fastqTomat0.processor.degenerate_tools import (make_regex_str, rc_str, convert_pattern, search_list_degenerate,
+                                                    sequence_mismatch_degenerate, make_merge_map)
+from fastqTomat0.processor.fastq import fastqProcessor
 
 # These are the minimum quality scores required to consider a sequence as a valid barcode
 BC_MIN_QUAL = 25
@@ -99,7 +99,6 @@ class ReadFromSeed:
 
 
 class Linker:
-
     scanner = None
     index_min_qual = None
 
@@ -371,7 +370,6 @@ class Link10xv31(Link10xBCCounts):
 
 def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1,
                            include_unknowns=True):
-
     bc_df = []
     for idx, idx_dict in bc_dict.items():
         if allowed_indexes is not None:
@@ -409,7 +407,6 @@ def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_inde
 
 
 def create_10x_map_df(linked_bcs_dict, bc2_map, include_unknowns=True):
-
     bc_df = []
 
     # If the index is OK, print all of the BC1, BC2, UMI counts for that index
