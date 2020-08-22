@@ -110,13 +110,10 @@ class Linker:
         mp_pool = multiprocessing.Pool(processes=cores)
 
         bcs = dict()
-        for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(*args)):
+        for bc_dict in mp_pool.starmap(self.parse_fastq, zip(*args)):
             bcs = self.merge_bcs(bcs, bc_dict)
 
         return bcs
-
-    def unpack_tuple_mp(self, *fq_tuple):
-        return self.parse_fastq(*fq_tuple)
 
     def parse_fastq(self, *args):
         raise NotImplementedError
@@ -160,6 +157,18 @@ class Linker:
         else:
             return open(file_name, mode=mode)
 
+    @staticmethod
+    def merge_bcs(bc_dict1, bc_dict2):
+        for idx_i5, level_1_dict in bc_dict2.items():
+            for idx_i7, level_2_dict in level_1_dict.items():
+                for bc, count in level_2_dict.items():
+                    try:
+                        bc_dict1[idx_i5][idx_i7][bc] += count
+                    except KeyError:
+                        nest_dict(bc_dict1, idx_i5, idx_i7)
+                        bc_dict1[idx_i5][idx_i7][bc] = count
+        return bc_dict1
+
 
 class LinkSudokuBC(Linker):
     """
@@ -173,9 +182,6 @@ class LinkSudokuBC(Linker):
             self.scanner = ReadFromSeed(bc_pattern, bc_len, min_quality=bc_min_qual)
         self.gz = is_zipped
         self.index_min_qual = index_min_qual
-
-    def unpack_tuple_mp(self, *fq_tuple):
-        return self.parse_fastq(*fq_tuple)
 
     def parse_fastq(self, fastq1, fastq2, fastq3):
         totes, pf, uniques = 0, 0, 0
@@ -209,18 +215,6 @@ class LinkSudokuBC(Linker):
 
         fq1_fh.close(), fq2_fh.close(), fq3_fh.close()
         return bc_seen
-
-    @staticmethod
-    def merge_bcs(bc_dict1, bc_dict2):
-        for idx_i5, level_1_dict in bc_dict2.items():
-            for idx_i7, level_2_dict in level_1_dict.items():
-                for bc, count in level_2_dict.items():
-                    try:
-                        bc_dict1[idx_i5][idx_i7][bc] += count
-                    except KeyError:
-                        nest_dict(bc_dict1, idx_i5, idx_i7)
-                        bc_dict1[idx_i5][idx_i7][bc] = count
-        return bc_dict1
 
 
 class Link10xBCCounts(Linker):
@@ -267,10 +261,6 @@ class Link10xBCCounts(Linker):
         self.bc1_whitelist = make_merge_map(bc1_whitelist) if bc1_whitelist is not None else None
         self.bc2_whitelist = make_merge_map(bc2_whitelist) if bc2_whitelist is not None else None
 
-    def unpack_tuple_mp(self, fq_tuple):
-        fastq1, fastq2, fastq3 = fq_tuple
-        return self.parse_fastq(fastq1, fastq2, fastq3)
-
     def parse_fastq(self, fastq1, fastq2, fastq3):
         totes, pf, uniques = 0, 0, 0
         bc_seen = {}
@@ -311,18 +301,6 @@ class Link10xBCCounts(Linker):
         umi = seq[self.umi_l:self.umi_r]
 
         return bc, umi
-
-    @staticmethod
-    def merge_bcs(bc_dict1, bc_dict2):
-        for idx, level_1_dict in bc_dict2.items():
-            for bc1, level_2_dict in level_1_dict.items():
-                for bc2, umi_set in level_2_dict.items():
-                    try:
-                        bc_dict1[idx][bc1][bc2].union(umi_set)
-                    except KeyError:
-                        nest_dict(bc_dict1, idx, bc1, bc2)
-                        bc_dict1[idx][bc1][bc2] = umi_set
-        return bc_dict1
 
 
 class Link10xv31(Link10xBCCounts):
