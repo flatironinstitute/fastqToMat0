@@ -155,22 +155,21 @@ class LinkSudokuBC(Linker):
         self.gz = is_zipped
         self.index_min_qual = index_min_qual
 
-    def parse_fastq_mp(self, fastq_i7, fastq_i5, fastq_r3, cores=None):
+    def parse_fastq_mp(self, *args, cores=None):
         if cores is None:
-            cores = len(fastq_i7)
+            cores = len(args[0])
 
         import multiprocessing
         mp_pool = multiprocessing.Pool(processes=cores)
 
         bcs = dict()
-        for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(fastq_i7, fastq_i5, fastq_r3)):
+        for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(*args)):
             bcs = self.merge_bcs(bcs, bc_dict)
 
         return bcs
 
-    def unpack_tuple_mp(self, fq_tuple):
-        fastq1, fastq2, fastq3 = fq_tuple
-        return self.parse_fastq(fastq1, fastq2, fastq3)
+    def unpack_tuple_mp(self, *fq_tuple):
+        return self.parse_fastq(*fq_tuple)
 
     def parse_fastq(self, fastq1, fastq2, fastq3):
         totes, pf, uniques = 0, 0, 0
