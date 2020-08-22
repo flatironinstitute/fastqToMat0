@@ -102,6 +102,25 @@ class Linker:
     scanner = None
     index_min_qual = None
 
+    def parse_fastq_mp(self, *args, cores=None):
+        if cores is None:
+            cores = len(args[0])
+
+        import multiprocessing
+        mp_pool = multiprocessing.Pool(processes=cores)
+
+        bcs = dict()
+        for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(*args)):
+            bcs = self.merge_bcs(bcs, bc_dict)
+
+        return bcs
+
+    def unpack_tuple_mp(self, *fq_tuple):
+        return self.parse_fastq(*fq_tuple)
+
+    def parse_fastq(self, *args):
+        raise NotImplementedError
+
     def parse_transcript_bc(self, seq, qual):
         if isinstance(self.scanner, list):
             for sc in self.scanner:
@@ -154,19 +173,6 @@ class LinkSudokuBC(Linker):
             self.scanner = ReadFromSeed(bc_pattern, bc_len, min_quality=bc_min_qual)
         self.gz = is_zipped
         self.index_min_qual = index_min_qual
-
-    def parse_fastq_mp(self, *args, cores=None):
-        if cores is None:
-            cores = len(args[0])
-
-        import multiprocessing
-        mp_pool = multiprocessing.Pool(processes=cores)
-
-        bcs = dict()
-        for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(*args)):
-            bcs = self.merge_bcs(bcs, bc_dict)
-
-        return bcs
 
     def unpack_tuple_mp(self, *fq_tuple):
         return self.parse_fastq(*fq_tuple)
@@ -260,19 +266,6 @@ class Link10xBCCounts(Linker):
 
         self.bc1_whitelist = make_merge_map(bc1_whitelist) if bc1_whitelist is not None else None
         self.bc2_whitelist = make_merge_map(bc2_whitelist) if bc2_whitelist is not None else None
-
-    def parse_fastq_mp(self, fastq1, fastq2, fastq3, cores=None):
-        if cores is None:
-            cores = len(fastq1)
-
-        import multiprocessing
-        mp_pool = multiprocessing.Pool(processes=cores)
-
-        bcs = dict()
-        for bc_dict in mp_pool.imap_unordered(self.unpack_tuple_mp, zip(fastq1, fastq2, fastq3)):
-            bcs = self.merge_bcs(bcs, bc_dict)
-
-        return bcs
 
     def unpack_tuple_mp(self, fq_tuple):
         fastq1, fastq2, fastq3 = fq_tuple
