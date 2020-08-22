@@ -55,8 +55,8 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, out_file_path=None, is_zipped=False,
     print("Loading whitelists")
     # Load whitelists
     bc1_whitelist = pd.read_csv(bc1_whitelist, header=None).iloc[:, 0].tolist() if bc1_whitelist is not None else None
-    bc2_map = pd.read_csv(bc2_mapfile, sep="\t") if bc2_mapfile is not None else None
-    bc2_whitelist = bc2_map.iloc[:, 0].tolist() if bc2_map is not None else None
+    bc2_map = pd.read_csv(bc2_mapfile, sep="\t", index_col=0) if bc2_mapfile is not None else None
+    bc2_whitelist = bc2_map.index.tolist() if bc2_map is not None else None
 
     print("Creating BC mapper")
     # Create a transcript to cell barcode linking map
@@ -67,12 +67,11 @@ def link_barcodes(bc_fastq_1, bc_fastq_2, out_file_path=None, is_zipped=False,
     bcs = linker.parse_fastq_mp(bc_fastq_1, bc_fastq_2)
 
     # Convert the output to a dataframe
-    print("Producing output")
-    bc_df = create_10x_map_df(bcs, allowed_indexes=None, max_index_mismatch=max_index_mismatch,
-                                   bc2_map=bc2_map, include_unknowns=include_unknowns)
+    print("Identified {n} cell-specific barcodes".format(n=len(bcs)))
+    bc_df = create_10x_map_df(bcs, bc2_map=bc2_map)
 
     if out_file_path is not None:
-        bc_df.to_csv(out_file_path, sep="\t")
+        bc_df.to_csv(out_file_path, sep="\t", index=False)
     return bc_df
 
 

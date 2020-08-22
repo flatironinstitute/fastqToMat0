@@ -140,6 +140,7 @@ class Linker:
 
     def read_pattern(self, bc_pattern):
         pattern_idx = convert_pattern(bc_pattern)
+        self.r1_len = len(bc_pattern)
         self.bc1_l, self.bc1_r = pattern_idx["B"]
         self.umi_l, self.umi_r = pattern_idx["U"]
 
@@ -234,6 +235,9 @@ class Link10xBCCounts(Linker):
     umi_r = None  # int
     umi_min_qual = None  # int
 
+    # R1 Len
+    r1_len = None
+
     # Second Barcode
     scanner = None  # ReadFromSeed object
     bc2_min_qual = None  # int
@@ -307,7 +311,6 @@ class Link10xv31(Link10xBCCounts):
 
     def parse_fastq(self, fastq1, fastq2):
         bc_seen = {}
-
         with self.open_wrapper(fastq1) as fq1_fh, self.open_wrapper(fastq2) as fq2_fh:
             for i, fastq_records in enumerate(fastqProcessor().fastq_gen(fq1_fh, fq2_fh)):
 
@@ -315,6 +318,9 @@ class Link10xv31(Link10xBCCounts):
                 _, seq2, qual2 = fastq_records[1]
 
                 print("Parsed {i} sequence reads".format(i=i)) if i % 100000 == 0 else None
+
+                if len(seq1) < self.r1_len:
+                    continue
 
                 try:
                     bc1, umi = self.parse_10x_bc(seq1, qual1)
@@ -336,6 +342,17 @@ class Link10xv31(Link10xBCCounts):
                     bc_seen[bc1][bc2] = set(umi)
 
         return bc_seen
+
+    @staticmethod
+    def merge_bcs(bc_dict1, bc_dict2):
+        for idx_i5, level_1_dict in bc_dict2.items():
+            for idx_i7, level_2_set in level_1_dict.items():
+                try:
+                    bc_dict1[idx_i5][idx_i7] = bc_dict1[idx_i5][idx_i7].union(level_2_set)
+                except KeyError:
+                    nest_dict(bc_dict1, idx_i5, idx_i7)
+                    bc_dict1[idx_i5][idx_i7] = level_2_set
+        return bc_dict1
 
 
 def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_index_mismatch=1, max_bc_mismatch=1,
@@ -376,27 +393,18 @@ def create_10x_genotype_df(bc_dict, allowed_indexes=None, bc2_map=None, max_inde
     return bc_df
 
 
-def create_10x_map_df(linked_bcs_dict, bc2_map, include_unknowns=True):
+def create_10x_map_df(linked_bcs_dict, bc2_map):
     bc_df = []
 
-    # If the index is OK, print all of the BC1, BC2, UMI counts for that index
+    # BC1 = CELL
     for bc1, bc2_dict in linked_bcs_dict.items():
 
-        # Print the Index, Barcode 1, Barcode 2, and UMI counts
+        # BC2 = TRANSCRIPT
         for bc2, umi_set in bc2_dict.items():
-            if bc2_map is not None:
-                try:
-                    bc2 = bc2_map[bc2]
-                except KeyError:
-                    if include_unknowns:
-                        pass
-                    else:
-                        continue
-
             bc_df.append({BARCODE: bc1, GENOTYPE: bc2, UMI_COUNT: len(umi_set)})
 
     # Convert a list of dicts to a dataframe
-    bc_df = pd.DataFrame(bc_df, columns=COLUMNS)
+    bc_df = pd.DataFrame(bc_df, columns=COLUMNS[1:]).join(bc2_map, on=GENOTYPE)
     return bc_df
 
 
