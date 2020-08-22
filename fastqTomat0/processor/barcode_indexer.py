@@ -325,7 +325,7 @@ class Link10xv31(Link10xBCCounts):
                 # Fix barcodes to the nearest barcode by hamming distance of 1
                 try:
                     bc1 = self.bc1_whitelist[bc1] if self.bc1_whitelist is not None else bc1
-                    bc2 = self.bc1_whitelist[bc2] if self.bc2_whitelist is not None else bc2
+                    bc2 = self.bc2_whitelist[bc2] if self.bc2_whitelist is not None else bc2
                 except KeyError:
                     continue
 
