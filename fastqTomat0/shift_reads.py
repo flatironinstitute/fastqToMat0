@@ -68,19 +68,12 @@ def shift_reads(file, out_path, pattern, gz=False):
         for i, li in enumerate(infh):
 
             if i % _om == 0:
-                print("{f}: {i} records parsed ({t:.2f})".format(f=file_name, i=int(i / 4), t=time.time() - _t))
+                print("{f}: {i} records parsed ({t:.2f} secs)".format(f=file_name, i=int(i / 4), t=time.time() - _t))
                 _t = time.time()
 
             li = li.strip()
             _no_process = li.startswith("@") or (len(li) == 0) or li.startswith("+")
-            if _no_process:
-                print(li, file=outfh)
-
-            else:
-                if i < _om and len(li) != _plen:
-                    _err = "Line {i}: {v} is {ll} characters, pattern is {pl}".format(i=i, v=li, ll=len(li), pl=_plen)
-                    raise ValueError(_err)
-                print(_shifter(li), file=outfh)
+            print(li, file=outfh) if _no_process else print(_shifter(li), file=outfh)
 
         print("{f} shift complete".format(f=file_name))
 
