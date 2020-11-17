@@ -60,11 +60,13 @@ def shift_reads(file, out_path, pattern, gz=False):
     o_file = os.path.join(out_path, file_name[:-3] if file_name.endswith(".gz") else file_name)
     infh = gzip.open(file, mode="rt", encoding="utf-8") if file_name.endswith(".gz") else open(file)
 
+    _om = int(4e6)
+
     with open(o_file, mode="wt") as outfh:
         for i, li in enumerate(infh):
 
-            if i % int(1e6) == 0:
-                print("{f}: {i} records parsed".format(f=file_name, i=i))
+            if i % _om == 0:
+                print("{f}: {i} records parsed".format(f=file_name, i=i / 4))
 
             li = li.strip()
             _no_process = li.startswith("@") or (len(li) == 0) or li.startswith("+")
@@ -72,7 +74,7 @@ def shift_reads(file, out_path, pattern, gz=False):
                 print(li, file=outfh)
 
             else:
-                if len(li) != _plen:
+                if i < _om and len(li) != _plen:
                     _err = "Line {i}: {v} is {ll} characters, pattern is {pl}".format(i=i, v=li, ll=len(li), pl=_plen)
                     raise ValueError(_err)
                 print(_shifter(li), file=outfh)
