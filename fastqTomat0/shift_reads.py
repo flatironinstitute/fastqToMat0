@@ -52,7 +52,7 @@ def shift_reads(file, out_path, pattern, gz=False):
         slicer = "x[{start}:{stop}]".format(start=_breakpoints[i - 1], stop=_breakpoints[i])
         bc.append(slicer) if all(c == "B" for c in pattern[_breakpoints[i - 1]: _breakpoints[i]]) else um.append(slicer)
 
-    def _shifter(x): return eval(" + ".join(bc) + " + " + " + ".join(um))
+    exec("def _shifter(x): return " + " + ".join(bc) + " + " + " + ".join(um), globals())
 
     _chrp = "".join(list(map(chr, range(65, 65 + len(pattern)))))
     print("Shifting pattern {p} to {np} ({chrp} to {chrpn})".format(p=pattern, np=_shifter(pattern),
@@ -74,6 +74,10 @@ def shift_reads(file, out_path, pattern, gz=False):
             li = li.strip()
             _no_process = li.startswith("@") or (len(li) == 0) or li.startswith("+")
             print(li, file=outfh) if _no_process else print(_shifter(li), file=outfh)
+
+            if _no_process and i < _om and len(li) != _plen:
+                _err = "Line {i}: {v} is {ll} characters, pattern is {pl}".format(i=i, v=li, ll=len(li), pl=_plen)
+                raise ValueError(_err)
 
         print("{f} shift complete".format(f=file_name))
 
