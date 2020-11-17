@@ -75,7 +75,7 @@ def shift_reads(file, out_path, pattern, gz=False):
             _no_process = li.startswith("@") or (len(li) == 0) or li.startswith("+")
             print(li, file=outfh) if _no_process else print(_shifter(li), file=outfh)
 
-            if _no_process and i < _om and len(li) != _plen:
+            if not _no_process and i < _om and len(li) != _plen:
                 _err = "Line {i}: {v} is {ll} characters, pattern is {pl}".format(i=i, v=li, ll=len(li), pl=_plen)
                 raise ValueError(_err)
 
