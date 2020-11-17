@@ -53,7 +53,7 @@ def shift_reads(file, out_path, pattern, gz=False):
 
     def _shifter(x): return eval(" + ".join(bc) + " + " + " + ".join(um))
 
-    _chrp = list(map(chr, range(65, 65 + len(pattern))))
+    _chrp = "".join(list(map(chr, range(65, 65 + len(pattern)))))
     print("Shifting pattern {p} to {np} ({chrp} to {chrpn})".format(p=pattern, np=_shifter(pattern),
                                                                     chrp=_chrp, chrpn=_shifter(_chrp)))
 
