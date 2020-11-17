@@ -6,6 +6,7 @@ import multiprocessing
 import itertools
 import gzip
 import subprocess
+import time
 
 
 def main():
@@ -61,12 +62,14 @@ def shift_reads(file, out_path, pattern, gz=False):
     infh = gzip.open(file, mode="rt", encoding="utf-8") if file_name.endswith(".gz") else open(file)
 
     _om = int(4e6)
+    _t = time.time()
 
     with open(o_file, mode="wt") as outfh:
         for i, li in enumerate(infh):
 
             if i % _om == 0:
-                print("{f}: {i} records parsed".format(f=file_name, i=i / 4))
+                print("{f}: {i} records parsed ({t:.2f})".format(f=file_name, i=int(i / 4), t=time.time() - _t))
+                _t = time.time()
 
             li = li.strip()
             _no_process = li.startswith("@") or (len(li) == 0) or li.startswith("+")
