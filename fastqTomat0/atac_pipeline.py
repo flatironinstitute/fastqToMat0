@@ -1,13 +1,8 @@
-from rice_atac_pipeline import OUTPUT_BASE_PATH
 import pandas as pd
 import subprocess
-import multiprocessing
 import os
 import io
-import glob
-import csv
 
-NUM_TASKS = 5
 CPU_PER_TASK = 4
 
 BWM_OUT_FILE = "aligned.sam"
