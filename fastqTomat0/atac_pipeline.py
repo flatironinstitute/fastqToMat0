@@ -136,7 +136,7 @@ def _align_atac_experiment(bwa_index, fastq_r1, fastq_r2, out_path=None, skip_if
     return out_file
 
 
-def _call_sam_to_bam(file_name, out_path, sample=None, sort=True, sort_by_name=False):
+def _call_sam_to_bam(file_name, out_path, sample=None, sort=True, sort_by_name=False, n_threads=CPU_PER_TASK):
 
     out_file = os.path.join(out_path, BAM_UNSORTED_OUT_FILE if not sort else BAM_SORTED_OUT_FILE)
 
@@ -146,7 +146,7 @@ def _call_sam_to_bam(file_name, out_path, sample=None, sort=True, sort_by_name=F
     print("Converting {f} to BAM".format(f=file_name))
 
     if sort:
-        return _call_sort_bam(file_name, out_file=out_file, by_name=sort_by_name)
+        return _call_sort_bam(file_name, out_file=out_file, by_name=sort_by_name, n_threads=n_threads)
     else:
         sb_cmd = SAMTOOLS_VIEW_CMD + ["-S", "-b", file_name]
 
