@@ -65,9 +65,11 @@ def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path="."
     
     os.makedirs(out_path, exist_ok=True)
 
+    if _fql_1 != _fql_2:
+        raise ValueError("Pass both R1 and R2 as a list or as a string")
     if _fql_1 and _fql_2:
         _multi_fqs = True
-    elif (_fql_1 or _fql_2) or (len(_fql_1) != len(_fql_2)):
+    elif (_fql_1 and _fql_2) and (len(fastq_r1) != len(fastq_r2)):
         raise ValueError("Pass the same number of R1 and R2 fastq file numbers")
     else:
         _multi_fqs = False
