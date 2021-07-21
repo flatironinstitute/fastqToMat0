@@ -146,7 +146,7 @@ def _call_sam_to_bam(file_name, out_path, sample=None, sort=True, sort_by_name=F
     print("Converting {f} to BAM".format(f=file_name))
 
     if sort:
-        return _call_sort_bam(file_name, out_file=out_file, by_name=sort_by_name, n_threads=n_threads)
+        return _call_sort_bam(file_name, out_file=out_file, by_name=sort_by_name, n_threads=n_threads, sample=sample)
     else:
         sb_cmd = SAMTOOLS_VIEW_CMD + ["-S", "-b", file_name]
 
