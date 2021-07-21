@@ -187,7 +187,8 @@ def _call_sort_bam(file_name, out_path=None, out_file=None, sample=None, by_name
         raise RuntimeError(_msg)
 
     # Also index the sorted BAM file just in case
-    _call_bam_index(out_file, sample=sample)
+    if not by_name:
+        _call_bam_index(out_file, sample=sample)
 
     return out_file
 
