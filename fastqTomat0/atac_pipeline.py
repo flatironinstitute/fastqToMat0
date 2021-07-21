@@ -84,13 +84,14 @@ def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path="."
                                                  sample_name=sample_name, n_threads=n_threads)
 
         _created_files.append(bwa_aligned)
-        bam_file = _call_sam_to_bam(bwa_aligned, out_path, sample=sample_name, sort=True, sort_by_name=True)
+        bam_file = _call_sam_to_bam(bwa_aligned, out_path, sample=sample_name, sort=True, sort_by_name=True,
+                                    n_threads=n_threads)
 
         _remove_file(bwa_aligned)
         _created_files.append(bam_file)
 
         n_aligned_w_dups = _call_count_aligned(bam_file, sample=sample_name)
-        bam_deduped = _samtools_remove_dups(bam_file, out_path=out_path)
+        bam_deduped = _samtools_remove_dups(bam_file, out_path=out_path, n_threads=n_threads)
         _remove_file(bam_file)
 
         n_aligned_without_dups = _call_count_aligned(bam_deduped, sample=sample_name)
