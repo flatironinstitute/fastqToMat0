@@ -3,6 +3,7 @@ from pandas.errors import EmptyDataError
 import subprocess
 import os
 import io
+import logging
 
 CPU_PER_TASK = 4
 
@@ -32,9 +33,11 @@ CHR_COL = "Chromosome"
 COUNT_COL = "Counts"
 FLEN_COL = "Fragment_Length"
 
+logging.basicConfig(format='%(asctime)-15s %(sname)s: %(cmd)s')
+logger = logging.Logger()
 
 def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path=".", sample_name=None,
-                        n_threads=CPU_PER_TASK):
+                        n_threads=CPU_PER_TASK, debug=False):
     """
     Process FASTQ files into an aligned, deduplicated BAM file and a set of MACS peaks
 
@@ -66,6 +69,9 @@ def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path="."
     
     os.makedirs(out_path, exist_ok=True)
 
+    if debug:
+        logger.setLevel(10)
+
     if _fql_1 != _fql_2:
         raise ValueError("Pass both R1 and R2 as a list or as a string")
     if _fql_1 and _fql_2:
@@ -94,7 +100,7 @@ def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path="."
         _created_files.append(bam_file)
 
         n_aligned_w_dups = _call_count_aligned(bam_file, sample=sample_name)
-        bam_deduped = _samtools_remove_dups(bam_file, out_path=out_path, n_threads=n_threads)
+        bam_deduped = _samtools_remove_dups(bam_file, out_path=out_path, n_threads=n_threads, sample=sample_name)
         _remove_file(bam_file)
 
         n_aligned_without_dups = _call_count_aligned(bam_deduped, sample=sample_name)
@@ -105,7 +111,7 @@ def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path="."
             _remove_file(f)
 
     return sample_name, bam_deduped, macs_file, (n_aligned_without_dups, n_aligned_w_dups,
-                                                 _get_chr_alignment_counts(bam_deduped),
+                                                 _get_chr_alignment_counts(bam_deduped, sample=sample_name),
                                                  _get_fragment_length(bam_deduped))
 
 
@@ -115,7 +121,7 @@ def _align_atac_experiment(bwa_index, fastq_r1, fastq_r2, out_path=None, skip_if
     out_path = "." if out_path is None else out_path
     out_file = os.path.join(out_path, BWM_OUT_FILE)
 
-    if skip_if_exists and os.path.exists(out_file):
+    if skip_if_exists and os.path.exists(out_file) and append_to_existing is False:
         return out_file
 
     if sample_name is not None:
@@ -125,6 +131,7 @@ def _align_atac_experiment(bwa_index, fastq_r1, fastq_r2, out_path=None, skip_if
 
     out_mode = "w+" if append_to_existing else "w"
     with open(out_file, mode=out_mode) as out_fh:
+        logger.debug("[BWM ALIGN]", extra={'sname': sample_name, 'cmd': " ".join(b_cmd)})
         proc = subprocess.run(b_cmd, stdout=out_fh, stderr=subprocess.DEVNULL)
 
     if proc.returncode != 0:
@@ -140,10 +147,6 @@ def _align_atac_experiment(bwa_index, fastq_r1, fastq_r2, out_path=None, skip_if
 def _call_sam_to_bam(file_name, out_path, sample=None, sort=True, sort_by_name=False, n_threads=CPU_PER_TASK):
 
     out_file = os.path.join(out_path, BAM_UNSORTED_OUT_FILE if not sort else BAM_SORTED_OUT_FILE)
-
-    if os.path.exists(out_file):
-        return out_file
-
     print("Converting {f} to BAM".format(f=file_name))
 
     if sort:
@@ -152,6 +155,7 @@ def _call_sam_to_bam(file_name, out_path, sample=None, sort=True, sort_by_name=F
         sb_cmd = SAMTOOLS_VIEW_CMD + ["-S", "-b", file_name]
 
         with open(out_file, mode="w") as out_fh:
+            logger.debug("[SAMTOOLS VIEW]", extra={'sname': sample, 'cmd': " ".join(sb_cmd)})
             proc = subprocess.run(sb_cmd, stdout=out_fh, stderr=subprocess.DEVNULL)
 
         if proc.returncode != 0:
@@ -166,10 +170,6 @@ def _call_sam_to_bam(file_name, out_path, sample=None, sort=True, sort_by_name=F
 def _call_sort_bam(file_name, out_path=None, out_file=None, sample=None, by_name=False, n_threads=CPU_PER_TASK):
 
     out_file = os.path.join(out_path, BAM_SORTED_OUT_FILE) if out_file is None else out_file
-
-    if os.path.exists(out_file):
-        return out_file
-
     print("Sorting {f}".format(f=file_name))
 
     sb_cmd = SAMTOOLS_SORT_CMD + [str(n_threads)]
@@ -179,6 +179,7 @@ def _call_sort_bam(file_name, out_path=None, out_file=None, sample=None, by_name
 
     sb_cmd = sb_cmd + ["-o", out_file, file_name]
 
+    logger.debug("[SAMTOOLS SORT]", extra={'sname': sample, 'cmd': " ".join(sb_cmd)})
     proc = subprocess.run(sb_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     if proc.returncode != 0:
@@ -199,6 +200,7 @@ def _call_bam_index(bam_file, sample=None, n_threads=CPU_PER_TASK):
     # Also index the sorted BAM file just in case
     sb_idx_cmd = SAMTOOLS_INDEX_CMD + [str(n_threads), bam_file]
 
+    logger.debug("[SAMTOOLS INDEX]", extra={'sname': sample, 'cmd': " ".join(sb_idx_cmd)})
     proc = subprocess.run(sb_idx_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     if proc.returncode != 0:
@@ -209,13 +211,10 @@ def _call_bam_index(bam_file, sample=None, n_threads=CPU_PER_TASK):
 
     return bam_file
 
-def _samtools_remove_dups(bam_file, out_path, resort_by_name=False, n_threads=CPU_PER_TASK):
+def _samtools_remove_dups(bam_file, out_path, resort_by_name=False, n_threads=CPU_PER_TASK, sample=None):
 
     out_file = os.path.join(out_path, BAM_SORTED_OUT_FILE)
     output_nsort_file_name, output_fixmates_file_name = None, None
-
-    if os.path.exists(out_file):
-        return out_file
 
     try:
 
@@ -232,6 +231,7 @@ def _samtools_remove_dups(bam_file, out_path, resort_by_name=False, n_threads=CP
         samtools_fixmates_cmd = samtools_fixmates_cmd + [output_nsort_file_name if resort_by_name else bam_file]
         samtools_fixmates_cmd = samtools_fixmates_cmd + [output_fixmates_file_name]
 
+        logger.debug("[SAMTOOLS FIXMATES]", extra={'sname': sample, 'cmd': " ".join(samtools_fixmates_cmd)})
         proc = subprocess.run(samtools_fixmates_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if proc.returncode != 0:
@@ -246,9 +246,10 @@ def _samtools_remove_dups(bam_file, out_path, resort_by_name=False, n_threads=CP
         _remove_file(output_fixmates_file_name)
 
         # Remove duplicates with markdup
-        print("Running samtools markdup on {f}".format(f=output_resort_file_name))
-
+        print("Running samtools markdup on {n}: {f}".format(n=sample, f=output_resort_file_name))
         samtools_markdup_cmd = SAMTOOLS_MARKDUP_CMD + [str(n_threads), output_resort_file_name, out_file]
+
+        logger.debug("[SAMTOOLS MARKDUP]", extra={'sname': sample, 'cmd': " ".join(samtools_markdup_cmd)})
         proc = subprocess.run(samtools_markdup_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if proc.returncode != 0:
@@ -272,6 +273,7 @@ def _call_count_aligned(file_name, sample=None, n_threads=CPU_PER_TASK):
 
     print("Counting aligned reads in {f}".format(f=file_name))
 
+    logger.debug("[SAMTOOLS COUNT]", extra={'sname': sample, 'cmd': " ".join(sb_cmd)})
     proc = subprocess.run(sb_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     if proc.returncode != 0:
@@ -283,9 +285,11 @@ def _call_count_aligned(file_name, sample=None, n_threads=CPU_PER_TASK):
     return int(proc.stdout.decode('utf-8'))
 
 
-def _get_chr_alignment_counts(bam_file):
+def _get_chr_alignment_counts(bam_file, sample=None):
 
     qc_cmd = COUNTS_PER_CHR_CMD + [bam_file]
+
+    logger.debug("[SAMTOOLS IDXSTATS]", extra={'sname': sample, 'cmd': " ".join(qc_cmd)})
     qc_proc = subprocess.run(qc_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     if qc_proc.returncode != 0:
@@ -305,9 +309,11 @@ def _get_chr_alignment_counts(bam_file):
     return df
 
 
-def _get_fragment_length(bam_file, max_len=2000, binwidth=10):
+def _get_fragment_length(bam_file, max_len=2000, binwidth=10, sample=None):
 
     frag_len_cmd = VIEW_MAPPED_CMD + [bam_file, "|"] + FRAGMENT_LEN_CMD
+
+    logger.debug("[SAMTOOLS VIEW FRAG LEN]", extra={'sname': sample, 'cmd': " ".join(frag_len_cmd)})
     flen_proc = subprocess.run(" ".join(frag_len_cmd), shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     df = pd.read_csv(io.StringIO(flen_proc.stdout.decode("utf-8")), names=[FLEN_COL])
@@ -324,6 +330,7 @@ def _remove_file(file, msg=False):
         return
     else:
         try:
+            logger.debug("Removing file {f}".format(f=file)})
             os.remove(file)
         except FileNotFoundError:
             pass
@@ -344,6 +351,7 @@ def _call_macs3(file_name, out_path, genome_size, sample=None):
     m3_cmd = MACS_CMD + ["-t", file_name, "-g", genome_size, "-n", sample, "-B", "-q", "0.01",
                          "--outdir", out_path]
 
+    logger.debug("[MACS3]", extra={'sname': sample, 'cmd': " ".join(m3_cmd)})
     proc = subprocess.run(m3_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     if proc.returncode != 0:
