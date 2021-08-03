@@ -330,7 +330,7 @@ def _remove_file(file, msg=False):
         return
     else:
         try:
-            logger.debug("Removing file {f}".format(f=file)})
+            logger.debug("Removing file {f}".format(f=file))
             os.remove(file)
         except FileNotFoundError:
             pass
