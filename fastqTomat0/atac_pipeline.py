@@ -2,6 +2,7 @@ import pandas as pd
 from pandas.errors import EmptyDataError
 import subprocess
 import os
+import sys
 import io
 import logging
 
@@ -35,6 +36,7 @@ FLEN_COL = "Fragment_Length"
 
 logging.basicConfig(format='%(asctime)-15s %(sname)s: %(cmd)s')
 logger = logging.Logger('ATAC')
+logger.addHandler(logging.StreamHandler(sys.stderr))
 
 def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path=".", sample_name=None,
                         n_threads=CPU_PER_TASK, debug=False):
@@ -70,7 +72,7 @@ def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path="."
     os.makedirs(out_path, exist_ok=True)
 
     if debug:
-        logger.setLevel(10)
+        logger.setLevel('DEBUG')
 
     if _fql_1 != _fql_2:
         raise ValueError("Pass both R1 and R2 as a list or as a string")
