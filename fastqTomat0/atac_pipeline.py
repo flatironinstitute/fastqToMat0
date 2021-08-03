@@ -34,7 +34,7 @@ COUNT_COL = "Counts"
 FLEN_COL = "Fragment_Length"
 
 logging.basicConfig(format='%(asctime)-15s %(sname)s: %(cmd)s')
-logger = logging.Logger()
+logger = logging.Logger('ATAC')
 
 def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path=".", sample_name=None,
                         n_threads=CPU_PER_TASK, debug=False):
