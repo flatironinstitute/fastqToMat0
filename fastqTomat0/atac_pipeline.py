@@ -216,7 +216,7 @@ def _call_bam_index(bam_file, sample=None, n_threads=CPU_PER_TASK):
 
 def _samtools_remove_dups(bam_file, out_path, resort_by_name=False, n_threads=CPU_PER_TASK, sample=None):
 
-    out_file = os.path.join(out_path, BAM_SORTED_OUT_FILE)
+    out_file = os.path.join(out_path, BAM_DEDUPED_OUT_FILE)
     output_nsort_file_name, output_fixmates_file_name = None, None
 
     try:
@@ -337,7 +337,7 @@ def _remove_file(file, msg=False):
         except FileNotFoundError:
             pass
         else:
-            logger.debug("Removing file {f}".format(f=file))
+            logger.debug("Removing file {f}".format(f=file), extra={'sname': "", 'cmd': ""})
     if msg:
         print("Removed file {f}".format(f=file))
 
