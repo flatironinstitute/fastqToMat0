@@ -34,9 +34,9 @@ CHR_COL = "Chromosome"
 COUNT_COL = "Counts"
 FLEN_COL = "Fragment_Length"
 
-logging.basicConfig(format='%(asctime)-15s %(sname)s: %(cmd)s')
 logger = logging.Logger('ATAC')
 logger.addHandler(logging.StreamHandler(sys.stderr))
+logger.setFormatter(logging.Formatter('%(asctime)-15s %(message)s %(sname)s: %(cmd)s'))
 
 def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path=".", sample_name=None,
                         n_threads=CPU_PER_TASK, debug=False):
@@ -332,10 +332,11 @@ def _remove_file(file, msg=False):
         return
     else:
         try:
-            logger.debug("Removing file {f}".format(f=file))
             os.remove(file)
         except FileNotFoundError:
             pass
+        else:
+            logger.debug("Removing file {f}".format(f=file))
     if msg:
         print("Removed file {f}".format(f=file))
 
