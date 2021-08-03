@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.errors import EmptyDataError
 import subprocess
 import os
 import io
@@ -287,7 +288,16 @@ def _get_chr_alignment_counts(bam_file):
     qc_cmd = COUNTS_PER_CHR_CMD + [bam_file]
     qc_proc = subprocess.run(qc_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
-    df = pd.read_csv(io.StringIO(qc_proc.stdout.decode("utf-8")), sep="\t", header=None)
+    if qc_proc.returncode != 0:
+        _msg = "{s} returned {c} [{cmd}]".format(s=bam_file, c=qc_proc.returncode, cmd=" ".join(qc_cmd))
+        raise RuntimeError(_msg)
+
+    try:
+        df = pd.read_csv(io.StringIO(qc_proc.stdout.decode("utf-8")), sep="\t", header=None)
+    except EmptyDataError:
+        _msg = "{s} returned {c} [{cmd}]".format(s=bam_file, c=qc_proc.returncode, cmd=" ".join(qc_cmd))
+        raise RuntimeError(_msg)
+
     df = df.iloc[:, [0, 2]].copy()
     df.columns = [CHR_COL, COUNT_COL]
     df.set_index(CHR_COL, inplace=True)
