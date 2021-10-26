@@ -1,4 +1,6 @@
 import pandas as pd
+import pandas.errors as pde
+
 from pandas.errors import EmptyDataError
 import subprocess
 import os
@@ -24,6 +26,16 @@ SAMTOOLS_MARKDUP_CMD = ["samtools", "markdup", "-r", "-@"]
 SAMTOOLS_VIEW_CMD = ["samtools", "view", "-@"]
 SAMTOOLS_INDEX_CMD = ["samtools", "index", "-@"]
 
+CHROM_COL = 'chrom'
+MULTIINTER_FULL_EXT = "_multiinter.tsv"
+MULTIINTER_BED_EXT = ".bed"
+MULTIINTER_COLNAMES = [CHROM_COL, 'start', 'end', 'num', 'list']
+MULTIINTER_BED_COLS = [CHROM_COL, 'start', 'end']
+
+BEDTOOLS_MULTIINTER = ['bedtools', 'multiinter', '-i']
+BEDTOOLS_MERGE = ['bedtools', 'merge', '-i']
+BEDTOOLS_SORT = ['bedtools', 'sort', '-i']
+
 COUNTS_PER_CHR_CMD = ["samtools", "idxstats"]
 VIEW_MAPPED_CMD = ["samtools", "view", "-f66"]
 FRAGMENT_LEN_CMD = ["cut", "-f", "9"]
@@ -34,13 +46,17 @@ CHR_COL = "Chromosome"
 COUNT_COL = "Counts"
 FLEN_COL = "Fragment_Length"
 
+COUNT_FILE_EXT = "_count.tsv"
+COUNT_COLUMNS = [CHROM_COL, 'start', 'end', 'count', 'num_bases_covered', 'length', 'fraction_covered']
+BEDTOOLS_COUNT = ['bedtools', 'coverage', '-sorted']
+
 logger = logging.Logger('ATAC')
 logger_handler = logging.StreamHandler(sys.stderr)
 logger_handler.setFormatter(logging.Formatter('%(asctime)-15s %(message)s %(sname)s: %(cmd)s'))
 logger.addHandler(logger_handler)
 
 def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path=".", sample_name=None,
-                        n_threads=CPU_PER_TASK, debug=False):
+                        n_threads=CPU_PER_TASK, debug=False, nomodel=False, extsize=None):
     """
     Process FASTQ files into an aligned, deduplicated BAM file and a set of MACS peaks
 
@@ -107,7 +123,8 @@ def process_atac_to_bed(bwa_index, fastq_r1, fastq_r2, genome_size, out_path="."
         _remove_file(bam_file)
 
         n_aligned_without_dups = _call_count_aligned(bam_deduped, sample=sample_name)
-        macs_file = _call_macs3(bam_deduped, out_path, genome_size, sample=sample_name)
+        macs_file = _call_macs3(bam_deduped, out_path, genome_size, sample=sample_name,
+                                nomodel=nomodel, extsize=extsize)
 
     finally:
         for f in _created_files:
@@ -337,12 +354,12 @@ def _remove_file(file, msg=False):
         except FileNotFoundError:
             pass
         else:
-            logger.debug("Removing file {f}".format(f=file), extra={'sname': "", 'cmd': ""})
+            logger.debug("[REMOVE FILE]", extra={'sname': "rm", 'cmd': file})
     if msg:
         print("Removed file {f}".format(f=file))
 
 
-def _call_macs3(file_name, out_path, genome_size, sample=None):
+def _call_macs3(file_name, out_path, genome_size, sample=None, nomodel=False, extsize=None):
 
     sample = "NA" if sample is None else sample
     out_file = os.path.join(out_path, sample + MACS_FILES[0])
@@ -354,6 +371,9 @@ def _call_macs3(file_name, out_path, genome_size, sample=None):
 
     m3_cmd = MACS_CMD + ["-t", file_name, "-g", genome_size, "-n", sample, "-B", "-q", "0.01",
                          "--outdir", out_path]
+
+    if nomodel:
+        m3_cmd = m3_cmd + ["--nomodel"] if extsize is None else ["--nomodel", str(extsize)]
 
     logger.debug("[MACS3]", extra={'sname': sample, 'cmd': " ".join(m3_cmd)})
     proc = subprocess.run(m3_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -367,3 +387,151 @@ def _call_macs3(file_name, out_path, genome_size, sample=None):
         raise RuntimeError(_msg)
 
     return out_file
+
+
+def _bedtools_multiinter(in_files, out_path, sample="NA", bed_sort_file=None):
+
+    out_file = os.path.join(out_path, sample + MULTIINTER_BED_EXT)
+
+    if os.path.exists(out_file):
+        return out_file
+
+    _keep_file = False
+    try:
+
+        try:
+            print("Running bedtools multiinter for {f}".format(f=sample))
+
+            multiinter_cmd = BEDTOOLS_MULTIINTER + [i[1] for i in in_files]
+            logger.debug("[BEDTOOLS MULTIINTER]", extra={'sname': sample, 'cmd': " ".join(multiinter_cmd)})
+            multiinter_proc = subprocess.run(multiinter_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            multiinter_df = pd.read_csv(io.StringIO(multiinter_proc.stdout.decode("utf-8")), sep="\t", header=None)
+            multiinter_df.columns = MULTIINTER_COLNAMES + [i[0] for i in in_files]
+
+            multiinter_df.to_csv(os.path.join(out_path, sample + MULTIINTER_FULL_EXT), sep="\t")
+
+        except (RuntimeError, pde.EmptyDataError):
+            print(io.StringIO(multiinter_proc.stdout.decode("utf-8")).read(1000))
+            print(io.StringIO(multiinter_proc.stderr.decode("utf-8")).getvalue())
+            raise 
+
+        try:
+            print("Combining peaks into single BED file for {f}".format(f=sample))
+
+            multiinter_df[MULTIINTER_BED_COLS].to_csv(out_file, sep="\t", header=None, index=False)
+
+            merge_proc = subprocess.run(BEDTOOLS_MERGE + [out_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.debug("[BEDTOOLS MERGE]", extra={'sname': sample, 'cmd': " ".join(BEDTOOLS_MERGE + [out_file])})
+
+            merge_df = pd.read_csv(io.StringIO(merge_proc.stdout.decode("utf-8")), sep="\t", header=None)
+            merge_df.to_csv(out_file, sep="\t", index=False, header=None)
+
+            if bed_sort_file is not None:
+
+                print("Sorting output BED file")
+
+                sort_cmd = BEDTOOLS_SORT + [out_file, "-g", bed_sort_file]
+                logger.debug("[BEDTOOLS SORT]", extra={'sname': sample, 'cmd': " ".join(sort_cmd)})
+                
+                sort_proc = subprocess.run(sort_cmd, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE)
+                sort_df = pd.read_csv(io.StringIO(sort_proc.stdout.decode("utf-8")), sep="\t", header=None)
+                sort_df.to_csv(out_file, sep="\t", index=False, header=None)
+
+            _keep_file = True
+
+            return out_file
+
+        except (RuntimeError, pde.EmptyDataError):
+            print(" ".join(BEDTOOLS_MERGE + [out_file]))
+            print(io.StringIO(merge_proc.stdout.decode("utf-8")).read(1000))
+            print(io.StringIO(merge_proc.stderr.decode("utf-8")).getvalue())
+            raise 
+
+    finally:
+        if not _keep_file:
+            _remove_file(out_file)
+
+
+def _bedtools_get_cov_count(in_files, bed_file, out_path, sample="NA"):
+    """
+
+    Creates a count table for reads that overlap a BED file intervals out of an arbitrary number of samples
+
+    :param in_files: A list of (sample_id, sample_bam_path) tuples
+    :type in_files: list(tuple(str, str))
+    :param bed_file: A path to a BED file for counting
+    :type bed_file: str
+    :param out_path: A path to output 
+    :type out_path: [type]
+    :param sample: [description], defaults to "NA"
+    :type sample: str, optional
+    :return: [description]
+    :rtype: [type]
+    """
+
+    out_file = os.path.join(out_path, sample + COUNT_FILE_EXT)
+
+    if os.path.exists(out_file):
+        print("Loading peak counts for {s} from {f}".format(s=sample, f=out_file))
+        return pd.read_csv(out_file, sep="\t")
+
+    _nuke_these_files = {out_file: True}
+    count_dfs = []
+
+    try:
+        for s_id, s_bam in in_files:
+            s_out_file = os.path.join(out_path, s_id + "_coverage.bed")
+
+            if os.path.exists(s_out_file):
+                print("Loading peaks for {s} from file {f}".format(s=s_id, f=s_out_file))
+                count_df = pd.read_csv(s_out_file, sep="\t", header=None)
+            else:
+                _nuke_these_files[s_out_file] = True
+
+                try:
+
+                    print("Counting peaks for {s} in file {f}".format(s=s_id, f=s_bam))
+                    count_cmd = BEDTOOLS_COUNT + ["-a", bed_file, "-b", s_bam]
+                    logger.debug("[BEDTOOLS COUNT]", extra={'sname': sample, 'cmd': " ".join(count_cmd)})
+
+                    count_proc = subprocess.run(count_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                    count_df = pd.read_csv(io.StringIO(count_proc.stdout.decode("utf-8")), sep="\t", header=None)
+                    count_df.to_csv(s_out_file, sep="\t", header=False, index=False)
+
+                except (RuntimeError, pde.EmptyDataError):
+                    print(" ".join(count_cmd))
+                    print(io.StringIO(count_proc.stdout.decode("utf-8")).read(1000))
+                    raise 
+
+                del _nuke_these_files[s_out_file]
+
+            count_df.columns = COUNT_COLUMNS
+            count_df.rename({'count': s_id}, axis=1, inplace=True)
+            count_df.drop(['num_bases_covered', 'length', 'fraction_covered'], axis=1, inplace=True)
+            count_df[CHROM_COL] = count_df[CHROM_COL].astype(str)
+
+            total_reads = _call_count_aligned(s_bam, sample=s_id) - count_df[s_id].sum()
+            total_reads = pd.DataFrame([["OTHER", 1, 1, total_reads]], columns=COUNT_COLUMNS[0:3] + [s_id])
+
+            # Put unmapped reads on the end of the 
+            count_df = count_df.append(total_reads, ignore_index=True)
+
+            count_dfs.append(count_df)
+
+        print("Combining peak counts for {s} into file {f}".format(s=sample, f=out_file))
+        full_count_df = count_dfs.pop(0)
+
+        for cdf in count_dfs:
+            full_count_df = full_count_df.merge(cdf, how='outer', on=MULTIINTER_BED_COLS).fillna(0)
+
+        _int_cols = full_count_df.columns != CHROM_COL
+        full_count_df.loc[:, _int_cols] = full_count_df.loc[:, _int_cols].astype(int)
+        full_count_df.to_csv(out_file, sep="\t", index=False)
+        del _nuke_these_files[out_file]
+
+        return full_count_df
+
+    finally:
+        for k in _nuke_these_files.keys():
+            _remove_file(k)
