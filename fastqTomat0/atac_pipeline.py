@@ -372,7 +372,7 @@ def _call_macs3(file_name, out_path, genome_size, sample=None, nomodel=False, ex
     m3_cmd = MACS_CMD + ["-t", file_name, "-g", genome_size, "-n", sample, "-B", "-q", "0.01"]
 
     if nomodel:
-        m3_cmd = m3_cmd + ["--nomodel"] if extsize is None else ["--nomodel", "--extsize", str(extsize)]
+        m3_cmd = m3_cmd + ["--nomodel"] if extsize is None else m3_cmd + ["--nomodel", "--extsize", str(extsize)]
 
     m3_cmd = m3_cmd + ["--outdir", out_path]
 
