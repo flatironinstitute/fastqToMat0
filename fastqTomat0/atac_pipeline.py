@@ -369,11 +369,12 @@ def _call_macs3(file_name, out_path, genome_size, sample=None, nomodel=False, ex
 
     print("Calling peaks with MACS3 from {f}".format(f=file_name))
 
-    m3_cmd = MACS_CMD + ["-t", file_name, "-g", genome_size, "-n", sample, "-B", "-q", "0.01",
-                         "--outdir", out_path]
+    m3_cmd = MACS_CMD + ["-t", file_name, "-g", genome_size, "-n", sample, "-B", "-q", "0.01"]
 
     if nomodel:
-        m3_cmd = m3_cmd + ["--nomodel"] if extsize is None else ["--nomodel", str(extsize)]
+        m3_cmd = m3_cmd + ["--nomodel"] if extsize is None else ["--nomodel", "--extsize", str(extsize)]
+
+    m3_cmd = m3_cmd + ["--outdir", out_path]
 
     logger.debug("[MACS3]", extra={'sname': sample, 'cmd': " ".join(m3_cmd)})
     proc = subprocess.run(m3_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
