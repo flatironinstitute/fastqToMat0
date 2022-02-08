@@ -485,7 +485,7 @@ def _bedtools_get_cov_count(in_files, bed_file, out_path, sample="NA"):
             s_out_file = os.path.join(out_path, s_id + "_coverage.bed")
 
             if os.path.exists(s_out_file):
-                print("Loading peaks for {s} from file {f}".format(s=s_id, f=s_out_file))
+                print("Loading counts in peaks for {s} from file {f}".format(s=s_id, f=s_out_file))
                 count_df = pd.read_csv(s_out_file, sep="\t", header=None)
             else:
                 _nuke_these_files[s_out_file] = True
