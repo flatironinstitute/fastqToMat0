@@ -454,7 +454,7 @@ def _bedtools_multiinter(in_files, out_path, sample="NA", bed_sort_file=None):
             _remove_file(out_file)
 
 
-def _bedtools_get_cov_count(in_files, bed_file, out_path, sample="NA"):
+def _bedtools_get_cov_count(in_files, bed_file, out_path, sample="NA", suffix=""):
     """
 
     Creates a count table for reads that overlap a BED file intervals out of an arbitrary number of samples
@@ -482,7 +482,7 @@ def _bedtools_get_cov_count(in_files, bed_file, out_path, sample="NA"):
 
     try:
         for s_id, s_bam in in_files:
-            s_out_file = os.path.join(out_path, s_id + "_coverage.bed")
+            s_out_file = os.path.join(out_path, s_id + suffix + "_coverage.bed")
 
             if os.path.exists(s_out_file):
                 print("Loading counts in peaks for {s} from file {f}".format(s=s_id, f=s_out_file))
@@ -502,7 +502,7 @@ def _bedtools_get_cov_count(in_files, bed_file, out_path, sample="NA"):
 
                 except (RuntimeError, pde.EmptyDataError):
                     print(" ".join(count_cmd))
-                    print(io.StringIO(count_proc.stdout.decode("utf-8")).read(1000))
+                    print(io.StringIO(count_proc.stdout.decode("utf-8")).read(2))
                     raise 
 
                 del _nuke_these_files[s_out_file]
